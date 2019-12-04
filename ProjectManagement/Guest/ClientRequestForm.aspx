@@ -4,7 +4,7 @@
 
 <html xmlns="https://www.w3.org/1999/xhtml">
 <head runat="server">
-    <title>JABSOM Biostatistics Core Facility Request Form</title>
+    <title>JABSOM Bioinformatics Core Facility Request Form</title>
 
     <link href="../Content/jquery-ui.min.css" rel="stylesheet" type="text/css" media="all" />
     <link href="~/Content/jquery-ui-timepicker-addon.min.css" rel="stylesheet" type="text/css" media="all" />
@@ -237,7 +237,7 @@
             <br />
             <div id="divRequest" visible="false">
                 <div class="text-center">
-                    <h3 class="text-center pageTitle"><strong>JABSOM BIOSTATISTICS CORE FACILITY REQUEST FORM</strong></h3>
+                    <h3 class="text-center pageTitle"><strong>JABSOM BIOINFORMATICS CORE FACILITY REQUEST FORM</strong></h3>
                 </div>
                 <br />
                 <div class="instructions">
@@ -253,20 +253,20 @@
                     </p>
                     <br />
                     <p class="contentWords">
-                        <strong>Authorship:</strong> It is our policy that for biostatistical <%--and bioinformatics --%>service requests which result in manuscript(s),
-                           the biostatistician <%--or bioinformatician --%>contribution should be recognized by manuscript co-authorship. Investigators submitting requests for
+                        <strong>Authorship:</strong> It is our policy that for  bioinformatics service requests which result in manuscript(s),
+                           the bioinformatician contribution should be recognized by manuscript co-authorship. Investigators submitting requests for
                            statistical assistance with research grant preparation are expected to include a budget for statistical effort in the grant.
                     </p>
                     <br />
-                    <p class="contentWords">
+                    <%--<p class="contentWords">
                         Please review the <a href="https://qhs.jabsom.hawaii.edu/wp-content/uploads/sites/31/2019/06/20190507-Biostat-Core-Policies_Final.pdf" target="_blank" class="greenLink"><strong>Biostatistics Core Facility Policies</strong></a> <strong>prior</strong> to submitting this request.
                     </p>
-                    <br />
+                    <br />--%>
                     <p class="contentWords">
                         If funding from <strong>Ola HAWAII</strong> will be used to support this request, please go <a href="https://redcap.jabsom.hawaii.edu/redcap/surveys/?s=8HD7K4EMWJ" class="greenLink"><strong>here</strong></a>. 
                     </p>
                     <br />
-                    <p class="contentWords">
+                    <%--<p class="contentWords">
                         <strong>JABSOM medical trainees (i.e., medical students, residents or fellows)</strong>: If you meet the following criteria,
                     </p>
                     <ul class="contentWords">
@@ -276,7 +276,7 @@
                     <p class="contentWords">
                         you can directly schedule a consultation appointment through the Biostatistics Core Facility <a href="https://qhs.jabsom.hawaii.edu/biostatistics-core/consulting/" class="greenLink"><strong>medical trainee consultation calendar </strong></a>
                         (no need to submit a separate JABSOM Biostatistics Core Facility request form). 
-                    </p>
+                    </p>--%>
                     <br />
                     <p class="contentWords">
                         Please complete the fields below with your contact information.
@@ -443,7 +443,7 @@
                     </label>
                     <div class="col-sm-10">
                         <textarea class="form-control noresize" rows="5" id="txtProjectSummary" name="txtProjectSummary" runat="server"></textarea>
-                        <p class="help-block">Providing a description of data, outcome, and service need will be helpful to the Biostatistics Core Facility prior to our initial consultation. (4000 character limit)</p>
+                        <p class="help-block">Providing a description of data, outcome, and service need will be helpful to the Bioinformatics Core Facility prior to our initial consultation. (4000 character limit)</p>
 
                     </div>
                 </div>
@@ -965,7 +965,7 @@
                 <br />
                 <div class="row">
                     <div class="col-sm-3">
-                        <label class="control-label">Biostatistics faculty/staff preference (if any)</label>
+                        <label class="control-label">Bioinformatics faculty/staff preference (if any)</label>
                     </div>
                     <div class="col-sm-3">
                         <asp:DropDownList ID="ddlBiostat" runat="server" CssClass="form-control"></asp:DropDownList>
@@ -1623,7 +1623,7 @@
                                 <br />
                                 <div class="row">
                                     <div class="col-sm-3">
-                                        <label class="control-label">Biostatistics faculty/staff preference (if any)</label>
+                                        <label class="control-label">Bioinformatics faculty/staff preference (if any)</label>
                                     </div>
                                     <div class="col-sm-3">
                                         <input class="form-control" type="text" name="txtBiostat_review" id="txtBiostat_review" readonly="readonly" runat="Server" />

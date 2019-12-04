@@ -54,6 +54,7 @@ namespace ProjectManagement.Guest
     ///  2019SEP11 - Jason Delos Reyes  -  Fixed "other" issue not saving into client request database upon submitting form.
     ///  2019NOV27 - Jason Delos Reyes  -  Made it easier to exclude or include Biostatistics and Bioinformatics individuals 
     ///                                    in the list of preferred members for clients to choose from.
+    ///  2019DEC03 - Jason Delos Reyes  -  Made the Client Request Form specific to Bioinformatics.
     /// </summary>
     public partial class ClientRequestForm : System.Web.UI.Page
     {
@@ -130,7 +131,7 @@ namespace ProjectManagement.Guest
                 rptStudyPopulation.DataBind();
 
                 /// Populates "Service" checkbox grid
-                qProjectField = cr.ProjectField_cr.Where(f => f.IsService == true && f.Name != "Bioinformatics Analysis").ToList();
+                qProjectField = cr.ProjectField_cr.Where(f => f.IsService == true && f.Name != "Biostatistics Data Analysis").ToList();
                 rptService.DataSource = qProjectField;
                 rptService.DataBind();
 
@@ -141,20 +142,20 @@ namespace ProjectManagement.Guest
                                                                          && b.Name != "N/A"
 
                                                                          /** Exclude Bioinfo Members **/
-                                                                         && b.Name != "Vedbar Khadka"
-                                                                         && b.Name != "Youping Deng"
-                                                                         && b.Name != "Yuanyuan Fu"
-                                                                         && b.Name != "Mark Menor"
+                                                                         //&& b.Name != "Vedbar Khadka"
+                                                                         //&& b.Name != "Youping Deng"
+                                                                         //&& b.Name != "Yuanyuan Fu"
+                                                                         //&& b.Name != "Mark Menor"
 
                                                                          /** Exclude Biostat Members**/
-                                                                         //&& b.Name != "Breanna Morrison"
-                                                                         //&& b.Name != "Chathura Siriwardhana"
-                                                                         //&& b.Name != "Eunjung Lim"
-                                                                         //&& b.Name != "Hyeong Jun Ahn"
-                                                                         //&& b.Name != "James Davis"
-                                                                         //&& b.Name != "Jason Delos Reyes"
-                                                                         //&& b.Name != "John Chen"
-                                                                         //&& b.Name != "So Yung Choi"
+                                                                         && b.Name != "Breanna Morrison"
+                                                                         && b.Name != "Chathura Siriwardhana"
+                                                                         && b.Name != "Eunjung Lim"
+                                                                         && b.Name != "Hyeong Jun Ahn"
+                                                                         && b.Name != "James Davis"
+                                                                         && b.Name != "Jason Delos Reyes"
+                                                                         && b.Name != "John Chen"
+                                                                         && b.Name != "So Yung Choi"
 
                                                                          /** (Always exclude) */
                                                                          && b.Name != "Laura Tipton"
