@@ -59,6 +59,8 @@ namespace ProjectManagement
     ///  2019JAN18 - Jason Delos Reyes  -  Restored rounding that was originally fixed in 2019JAN09.  An page view error
     ///                                    appeared during publish. Will need to revisit issue.
     ///  2019JUN25 - Jason Delos Reyes  -  Made Time Entry view page only display *current* QHS faculty/staff.
+    ///  2019DEC05 - Jason Delos Reyes  -  Added ability for super users to view time entry page if they are not a part of
+    ///                                    the faculty/staff list (bioinformatics side).
     /// </summary>
     public partial class TimeEntry1 : System.Web.UI.Page
     {
@@ -907,7 +909,7 @@ namespace ProjectManagement
 
                     //ddlBioStat
                     var biostat = context.BioStats.FirstOrDefault(b => b.LogonId == userName);
-                    if (biostat != null)
+                    if (biostat != null || Page.User.IsInRole("Super"))
                     {
                         /// Admin has the ability to view time entries of every faculty/staff member.
                         if (Page.User.IsInRole("Admin"))

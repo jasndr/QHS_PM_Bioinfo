@@ -120,6 +120,8 @@ namespace ProjectManagement
     ///  2019SEP10 - Jason Delos Reyes  -  Fixed "Year/Call/Wave" display issue not separating upon reading from database.
     ///  2019NOV13 - Jason Delos Reyes  -  Fixed "Year/Call/Wave" box appearing despite Ola HAWAII Request Type (Pilot, R21, R01, Other) not selected.
     ///  2019DEC03 - Jason Delos Reyes  -  Removed "Project Type" and "Credit To" as this interface will connect to an independent database.
+    ///  2019DEC04 - Jason Delos Reyes  -  Made project page be able to see projects previously credited to Biostat Core in order to be able
+    ///                                    to delete Biostat Core Faculty/Staff.
     /// </summary>
     public partial class ProjectForm2 : System.Web.UI.Page
     {
@@ -849,7 +851,11 @@ namespace ProjectManagement
             txtInitialDate.Text = project.InitialDate.ToShortDateString();
             txtDeadline.Text = project.DeadLine != null ? Convert.ToDateTime(project.DeadLine).ToShortDateString() : string.Empty;
 
-            ddlLeadBiostat.SelectedValue = project.LeadBiostatId > 0 ? project.LeadBiostatId.ToString() : string.Empty;
+            ddlLeadBiostat.SelectedValue = project.LeadBiostatId > 0 ? (ddlLeadBiostat.Items.FindByValue(project.LeadBiostatId.ToString())
+                                                                        == null ? "" : project.LeadBiostatId.ToString()) : string.Empty;
+
+            
+
 
             //if (project.OtherMemberBitSum > 0)
             //{

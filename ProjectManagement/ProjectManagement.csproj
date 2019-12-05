@@ -515,8 +515,6 @@
     <Content Include="Content\bootstrap-datepicker3.css.map" />
     <Content Include="Content\bootstrap-datepicker.standalone.css.map" />
     <Content Include="Content\bootstrap-datepicker.css.map" />
-    <None Include="Properties\PublishProfiles\DB_Biostat.pubxml" />
-    <None Include="Properties\PublishProfiles\DEV_Biostat.pubxml" />
     <None Include="Scripts\jquery-3.4.1.intellisense.js" />
     <Content Include="Scripts\jquery-3.4.1.js" />
     <Content Include="Scripts\jquery-3.4.1.min.js" />
@@ -785,9 +783,6 @@
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Properties\PublishProfiles\DEV.pubxml" />
-    <None Include="Properties\PublishProfiles\PM - External.pubxml" />
-    <None Include="Properties\PublishProfiles\PM.pubxml" />
     <Content Include="PubHistory.aspx" />
     <Content Include="Publication.aspx" />
     <Content Include="Report\AdhocReport.aspx" />
