@@ -30,6 +30,7 @@ namespace ProjectManagement.Admin
     ///                                 -  Removed "user rights" checkboxes for faculty/staff without tracking system accounts.
     ///  2018NOV27 - Jason Delos Reyes  -  Enabled "user rights" feature to add/remove user rights privileges on Admin/Staff page.
     ///  2019APR03 - Jason Delos Reyes  -  Fixed "edit" feature with missing accounts.
+    ///  2019DEC06 - Jason Delos Reyes  -  Added ability ot add faculty/staff on the staff page.
     ///  </summary>
     public partial class StaffForm : System.Web.UI.Page
     {
@@ -58,6 +59,7 @@ namespace ProjectManagement.Admin
                 if (context.Invests.Count() > 0)
                 {
                     var query = context.BioStats
+                           .Where(d=>d.Id != 99)
                            .OrderBy(d => d.Id);
 
                     GridView1.DataSource = query.ToList();
@@ -121,25 +123,30 @@ namespace ProjectManagement.Admin
                         {
                             int largestId = context.BioStats.OrderByDescending(b => b.Id).FirstOrDefault(g => g.Id != 99).Id + 1;
 
-                            BioStat biostat = new BioStat()
+
+                            using (var transaction = context.Database.BeginTransaction())
                             {
-                                //Id = largestId, // <- Ignored by the system!!!
-                                Name = txtName.Text,
-                                Type = txtType.Text,
-                                Email = txtEmail.Text,
-                                LogonId = txtLogonId.Text,
-                                EndDate = DateTime.Parse(txtEndDate.Text),
-                                //BitValue = (long)Math.Pow(2, largestId) // <- To be added once Id can be inserted via Identity Insert
+                                BioStat biostat = new BioStat()
+                                {
+                                    Id = largestId,
+                                    Name = txtName.Text,
+                                    Type = txtType.Text,
+                                    Email = txtEmail.Text,
+                                    LogonId = txtLogonId.Text,
+                                    EndDate = DateTime.Parse(txtEndDate.Text),
+                                    BitValue = (long)Math.Pow(2, largestId)
+                                };
 
-                            };
+                                context.Database.ExecuteSqlCommand("SET IDENTITY_INSERT BioStats ON");
 
-                            //context.Database.ExecuteSqlCommand("SET IDENTITY_INSERT BioStats ON");
+                                context.BioStats.Add(biostat);
+                                WriteInvest(context, biostat);
+                                context.Database.ExecuteSqlCommand("SET IDENTITY_INSERT BioStats OFF");
 
-                            context.BioStats.Add(biostat);
+                                transaction.Commit();
 
-                            //context.Database.ExecuteSqlCommand("SET IDENTITY_INSERT BioStats OFF");
 
-                            WriteInvest(context, biostat);
+                            }
 
                             BindGrid();
                         }
