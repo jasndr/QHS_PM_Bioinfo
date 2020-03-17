@@ -43,6 +43,8 @@ namespace ProjectManagement.Report
     ///  2019MAY10 - Jason Delos Reyes  -  Created "Rpt_Project_Summary2a" to be able to pull projects that have 
     ///                                    "Submitted to RMATRIX" and "Submitted to Ola HAWAII" checked.
     ///  2019DEC03 - Jason Delos Reyes  -  Removed "Core (project type)" and "Credit To" as this will be a standalone database.
+    ///  2020MAR16 - Jason Delos Reyes  -  Set "Project Type" and "Credit To" to "-1" to pull all results (not limited to Biostat
+    ///                                    projects).
     /// </summary>
     public partial class Project : System.Web.UI.Page
     {
@@ -214,7 +216,7 @@ namespace ProjectManagement.Report
 
             Int32.TryParse(ddlPIStatus.SelectedValue, out piStatusId);
 
-            int phdId = 0, msId = 0, healthValue = 0, grantValue = 0, isProject = 1, isBiostat = 1, creditTo = 1,
+            int phdId = 0, msId = 0, healthValue = 0, grantValue = 0, isProject = 1, isBiostat = -1, creditTo = -1,
                 isRmatrixRequest = 0, isOlaRequest = 0, submitRMATRIX = 1, submitOlaHAWAII = 1, letterOfSupport = 0;
 
             Int32.TryParse(ddlPhd.SelectedValue, out phdId);
