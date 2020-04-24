@@ -45,6 +45,8 @@ namespace ProjectManagement.Report
     ///  2019DEC03 - Jason Delos Reyes  -  Removed "Core (project type)" and "Credit To" as this will be a standalone database.
     ///  2020MAR16 - Jason Delos Reyes  -  Set "Project Type" and "Credit To" to "-1" to pull all results (not limited to Biostat
     ///                                    projects).
+    ///  2020APR23 - Jason Delos Reyes  -  Edited "master' dropdown list to cater to those that don't necessarily 
+    ///                                    hold that title in the QHS faculty/staff degree type.
     /// </summary>
     public partial class Project : System.Web.UI.Page
     {
@@ -65,7 +67,7 @@ namespace ProjectManagement.Report
                 {
                     var dropDownSource = new Dictionary<int, string>();
 
-                    var query = dbContext.BioStats.Where(b => b.Id > 0);
+                    var query = dbContext.BioStats.Where(b => b.Id > 0 && b.Id != 99);
 
                     dropDownSource = query
                                     .Where(b => b.Type == "phd")
@@ -76,7 +78,7 @@ namespace ProjectManagement.Report
                     PageUtility.BindDropDownList(ddlPhd, dropDownSource, " --- Select --- ");
 
                     dropDownSource = query
-                                    .Where(b => b.Type == "master")
+                                    .Where(b => b.Type != "phd")
                                     .OrderByDescending(b => b.EndDate)
                                     .ThenBy(b => b.Name)
                                     .ToDictionary(b => b.Id, b => b.Name);
