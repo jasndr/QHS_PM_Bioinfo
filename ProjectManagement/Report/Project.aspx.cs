@@ -131,7 +131,7 @@ namespace ProjectManagement.Report
                     textAreaPI.Value = Newtonsoft.Json.JsonConvert.SerializeObject(piName);
 
                     Dictionary<int, string> reportType = new Dictionary<int, string>();
-                    reportType.Add(1, "Check-in Meeting Report");
+                    /*reportType.Add(1, "Check-in Meeting Report");*/
 
                     PageUtility.BindDropDownList(ddlReportType, reportType, "Full Report");
 

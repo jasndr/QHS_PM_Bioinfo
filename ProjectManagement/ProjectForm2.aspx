@@ -1,2355 +1,2463 @@
-﻿//using Biostat.BL;
-//using Biostat.Model;
-using ProjectManagement.Model;
-using ProjectManagement.Models;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity.Core.Objects;
-using System.Linq;
-using System.Text;
-using System.Web;
-using System.Web.UI;
-using System.Web.UI.WebControls;
-using Microsoft.AspNet.Identity;
-using Microsoft.AspNet.Identity.Owin;
-using System.Globalization;
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="ProjectForm2.aspx.cs" Inherits="ProjectManagement.ProjectForm2" %>
 
-namespace ProjectManagement
-{
-    /// <summary>
-    /// @File: ProjectForm2.aspx.cs
-    /// @FrontEnd: ProjectForm2.aspx
-    /// @Author: Yang Rui
-    /// @Summary: Project Form of Project Tracking System.
-    /// 
-    ///           Manages and collects project information.  Items that can be collected and
-    ///           entered includes, but not limited to, Project Name, PI (need to be entered before project),
-    ///           description, QHS faculty/staff assigned to, study type, study population, which grants
-    ///           are supporting the project, and estimated Ph.D. and/or M.S. hours for the project that
-    ///           serves as a "cap" that needs approval from admin before adding more hours.
-    ///           Sends an email to tracking team if a new project has been entered.
-    ///           Ability to send a survey email after a project has been entered.
-    ///           
-    /// @Maintenance/Revision History:
-    ///  YYYYDDMMM - NAME/INITIALS      -  REVISION
-    ///  ------------------------------------------
-    ///  2018FEB01 - Jason Delos Reyes  -  Added comments/documentation for easier legibility and
-    ///                                    easier data structure view and management.
-    ///  2018FEB05 - Jason Delos Reyes  -  Added more comments for easier legibility.
-    ///  2018FEB12 - Jason Delos Reyes  -  Added more comments.
-    ///  2018FEB22 - Jason Delos Reyes  -  Removes the functionality that requires "Core" information from
-    ///                                    defaulting to "Bioinformatics"and "Credit To" information from
-    ///                                    defaulting to "Both".
-    ///  2018FEB26 - Jason Delos Reyes  -  Added a "send project closure notication" email to admin to notify
-    ///                                    the QHS admin list (assigned in Web.config file) that a project
-    ///                                    has been closed.
-    ///  2018APR06 - Jason Delos Reyes  -  The change made on 2/22 prevented "Core" and "Credit To" to be edited,
-    ///                                    basically also undoing any pre-checked items in those sections if the
-    ///                                    project form has to be saved (problematic for admin reviews).  The
-    ///                                    bug has been removed in this revision, while still also able to save
-    ///                                    "empty" (unchecked) choices when necessary.
-    ///  2018APR12 - Jason Delos Reyes  -  Fixed the "Send Client Survey" button so it should work as intended.
-    ///                                    Also added more documentation for easier understandability.
-    ///  2018APR26 - Jason Delos Reyes  -  Added Ola Hawaii checkboxes and fields to keep track of Ola Hawaii Requests.
-    ///  2018APR30 - Jason Delos Reyes  -  Added Health disparity options for "Study Population" section.
-    ///  2018MAY16 - Jason Delos Reyes  -  Made "Project Type" and "Credit To" checkboxes required fields.
-    ///  2018MAY24 - Jason Delos Reyes  -  Replaced "Do not report" button with "Report to RMATRIX
-    ///                                    (stored values remain the same: 0 is report, 1 is do not report).
-    ///                                    Also made equivalent button for Ola Hawaii ("Report to Ola Hawaii").
-    ///  2018JUL11 - Jason Delos Reyes  -  Made "Report to RMATRIX" and "Report to Ola Hawaii" checkboxes pre-checked
-    ///                                    in code behind (since most project-entry is by non-admin) as this function
-    ///                                    is required for all current projects.
-    ///  2018JUL23 - Jason Delos Reyes  -  Added "Admin Review Email" script to allows users to be notified when their
-    ///                                    project has been reviewed by the tracking team and that they are able
-    ///                                    to start entering their hours for a project.
-    ///  2018SEP04 - Jason Delos Reyes  -  Added Javascript code on front end to make the "RMATRIX" and "Ola Hawaii" options 
-    ///                                    checked by default on the Acknowledgement section.
-    ///                                 -  Removed G12, AHRQ, and Center for Native and Pacific Islands Health Disparities Research
-    ///                                    from Funding Source; added P30 UHCC grant.
-    ///                                 -  Removed G12, AHRQ, Center for Native and Pacific Islands Health Disparities Research,
-    ///                                    RTRN, No (no funding), and State/County Government options from Acknowledgements;
-    ///                                    added P30 UHCC option.
-    ///  2018SEP12 - Jason Delos Reyes  -  Added "MOU, Y/N" question in "Funding Source" section as a way to switch the general
-    ///                                    "MOU" option to just corresponding to School of Nursing and Dental Hygiene (or
-    ///                                    Department Funding in general) instead.  Removed "MOU" grant option in "Funding source".
-    ///  2018OCT01 - Jason Delos Reyes  -  Reordered project phases numerically (instead of alphanumerically, which orders the phase as
-    ///                                    1, 10, 11, 2, 3, etc.).
-    ///                                 -  Fixed minor bug that displays "Is project supported by MOU" question, even though the 
-    ///                                    "Other" had been previously selected.  It was only appearing in page load.  The question
-    ///                                    is supposed to only appear if "School of Nursing & Dental Hygiene" is selected for 
-    ///                                    "Department Funding".
-    ///  2018OCT23 - Jason Delos Reyes  -  Sends "reviewed by admin" email to both Lead Biostat Member and creator, if they are
-    ///                                    not the same person.
-    ///  2018OCT31 - Jason Delos Reyes  -  Added a "pop-up modal" for errors instead of standalone Javascript alert.
-    ///                                 -  Changed pop-up modal to have an image of a stop sign, as well as rewording error message.
-    ///  2018NOV07 - Jason Delos Reyes  -  Added a reference to the Admin person who reviewed the project to record the person who
-    ///                                    "approved" the project.
-    ///  2018DEC05 - Jason Delos Reyes  -  Changed "Project Closure" email recipients from admin to tracking team.
-    ///  2019MAR04 - Jason Delos Reyes  -  In "Service" section:
-    ///                                    • Changed "Data Analysis" to "Biostatistics Data Analysis",
-    ///                                    • Added options "Data Analysis Plan & Development" and "Letter of Support" options,
-    ///                                    • Removed (made hidden) "Grant Proposal Development" option.
-    ///                                 -  In "Other Description" section:
-    ///                                    • Added fields to address grant proposal-related fields.
-    ///  2019MAR05 - Jason Delos Reyes  -  Made changes to UHGrantID variable so that a null value can be saved, if applicable.
-    ///  2019MAR06 - Jason Delos Reyes  -  Added ability to view linked grants on Project form if "is this project for a grant
-    ///                                    proposal" question is selected.  
-    ///                                 -  Solved "missing project link" in admin reviewed emails by creating referral link 
-    ///                                    from projectId instead of lazily taking existing URL and sending that link.
-    ///  2019MAR08 - Jason Delos Reyes  -  Added linkage from in project form to grant form *if* a grant proposal application
-    ///                                    has been attached to this project.
-    ///  2019MAR13 - Jason Delos Reyes  -  Edited "What is the grant?" dropdown to prioritize Ola Hawaii first before
-    ///                                    other dropdown selections.
-    ///                                 -  Reverted "missing project link" change at the request of tracking team.
-    ///  2019MAR14 - Jason Delos Reyes  -  Changed "Admin Review" email to include other faculty/staff members in the 
-    ///                                    "Other Member" field, removing the link to the project creator as necessary.
-    ///  2019APR03 - Jason Delos Reyes  -  Removed sending to "SuperAdmin" as QHS Tracking Team is taking full
-    ///                                    responsibility of receiving tracking notifications.
-    ///  2019APR04 - Jason Delos Reyes  -  Changed "Department Funding" dropdown options functionality for "Funding Source" 
-    ///                                    and "Acknowledgement" sections so that it matches text value vs. numeric value
-    ///                                    to account for management changes.
-    ///  2019SEP05 - Jason Delos Reyes  -  Fixed issue where loading projects for just for specific selected PI isn't working. 
-    ///  2019SEP06 - Jason Delos Reyes  -  Redirected "Request Type" options to appear if either "Submit to Ola HAWAII" or "Ola HAWAII request
-    ///                                    for resources" are seleceted in the admin section of the project page.
-    ///                                 -  Made "RMATRIX-II request for resources" and "Submit to RMATRIX" mutually exclusive (can only select one or the other).
-    ///                                    Same for "Ola HAWAII request for resources" and "Ola HAWAII".
-    ///  2019SEP09 - Jason Delos Reyes  -  Reorganized "Request Type" options to specify distinction between "application" and "funded" projects
-    ///                                    that are either have the type "pilot", "R21", "R01", or "other".  Created new fields in the database
-    ///                                    to correspond to this change.
-    ///  2019SEP10 - Jason Delos Reyes  -  Fixed "Year/Call/Wave" display issue not separating upon reading from database.
-    ///  2019NOV13 - Jason Delos Reyes  -  Fixed "Year/Call/Wave" box appearing despite Ola HAWAII Request Type (Pilot, R21, R01, Other) not selected.
-    ///  2020MAY07 - Jason Delos Reyes  -  Made "Acknowledgement" section check only "Ola HAWAII" by default. Also fixed default
-    ///                                    checking of "Submit to RMATRIX" and "Submit to Ola HAWAII" to see default setting.
-    /// </summary>
-    public partial class ProjectForm2 : System.Web.UI.Page
-    {
-        //IBusinessLayer businessLayer = new BusinessLayer();
-
-        /// <summary>
-        /// Loads page based on current status.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void Page_Load(object sender, EventArgs e)
-        {
-            string projectId = Request.QueryString["Id"];
-
-            if (!Page.IsPostBack)
-            {
-                BindControl();
-                
-
-                int id = 0;
-                Int32.TryParse(projectId, out id);
-
-                // Auto-populate project if existing id specified.
-                if (id > 0)
-                    BindProject(id);
-
-                // Second page is only available for Admin only.
-                if (!Page.User.IsInRole("Admin"))
-                {
-                    tabAdmin.Style["display"] = "none";
-                }
-            }
-            
-             // Display linked grant(s) to the project.
-             BindGridViewGrant();
-            
+<%@ Register Assembly="DropDownChosen" Namespace="CustomDropDown" TagPrefix="ucc" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
+    <script src="Scripts/jquery.bootstrap.wizard.min.js"></script>
+    <script src="Scripts/bootstrap-datepicker.min.js"></script>
+    <script src="Scripts/chosen.jquery.js"></script>
+    <link href="Content/chosen.css" rel="stylesheet" />
+    <style>
+        h5 {
+            overflow: hidden;
+            text-align: center;
+            font-weight: bold;
         }
 
-        /// <summary>
-        /// Saves project into database when user clicks "submit" button.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void btnSubmit1_Click(object sender, EventArgs e)
-        {
-            /// Produces error message if fields are blank. 
-            string str = ValidateResult();
-
-            if (str.Equals(string.Empty))
-            {
-                /// Gets the project or creates project if not yet exists.
-                Project2 project = GetProject();
-
-                /// Adds or updates project in database; returns error message if missing fields.
-                string errorMsg = SaveProject(project);
-
-                if (errorMsg.Equals(string.Empty))
-                {
-                    Response.Write("<script>alert('Project has been saved.');</script>");
-
-                    //BindProject(project.Id);
-                }
-                else
-                {
-                    //Response.Write("<script>alert('" + errorMsg + "');</script>");
-
-                    StringBuilder sb2 = new StringBuilder();
-                    sb2.Append(@"<script type='text/javascript'>");
-                                     sb2.Append("$('#MainContent_lblWarning').text('Please review the following error message:');");
-                                     sb2.Append("$('#textWarning').append('<span>" + errorMsg + "</span>');");
-                                     sb2.Append("ShowWarningModal();");
-                                     sb2.Append(@"</script>");
-
-                    Page.ClientScript.RegisterStartupScript(this.GetType(),
-                        "ShowModalScript", sb2.ToString());
-                }
-            }
-            else
-            {
-                //Response.Write("<script>alert('" + str + "');</script>");
-
-                string err = str.Replace("\\n", "<br />");
-
-                StringBuilder sb2 = new StringBuilder();
-                sb2.Append(@"<script type='text/javascript'>");
-                                 sb2.Append("$('#textWarning').append('<span>" + err + "</span>');");
-                                 sb2.Append("ShowWarningModal();");
-                                 sb2.Append(@"</script>");
-
-                Page.ClientScript.RegisterStartupScript(this.GetType(),
-                    "ShowModalScript", sb2.ToString());
+            h5:before,
+            h5:after {
+                background-color: #000;
+                content: "";
+                display: inline-block;
+                height: 1px;
+                position: relative;
+                vertical-align: middle;
+                width: 50%;
             }
 
+            h5:before {
+                right: 0.5em;
+                margin-left: -50%;
+            }
+
+            h5:after {
+                left: 0.5em;
+                margin-right: -50%;
+            }
+
+        .table-borderless tbody tr td, .table-borderless tbody tr th, .table-borderless thead tr th {
+            border: none;
         }
 
-        /// <summary>
-        /// Saves current project in database.
-        /// Either:
-        /// (1) Adds new project in database.
-        ///      - Sends an email to QHS tracking list to view current project.
-        /// (2) Saves existing project in database.
-        /// </summary>
-        /// <param name="project">Current project in view.</param>
-        /// <returns>Error message if there is a discrepancy.</returns>
-        private string SaveProject(Project2 project)
-        {
-            string errorMsg = "";
-            int id = project.Id;
+        #formIncomplete {
+            color: darkred;
+        }
 
-            List<ProjectPhase> newPhases = GetPhase(project.Id);
+        #MainContent_lblWarning {
+            font-size: 16pt;
+        }
 
-            using (ProjectTrackerContainer db = new ProjectTrackerContainer())
-            {
-                /// If no existing id, adds project to database and sends email to tracking team for review.
-                if (0 == id)
-                {
-                    //using (var dbTrans = db.Database.BeginTransaction())
-                    //{
-                    try
-                    {
-                        db.Project2.Add(project);
-                        db.SaveChanges();
+        #textWarning {
+            font-size: 12pt;
+            font-weight: bold;
+            color: red;
+        }
 
-                        id = project.Id;
-                        foreach (var phase in newPhases)
-                        {
-                            phase.ProjectId = id;
-                            db.ProjectPhase.Add(phase);
+        #divGrantProposal2 {
+            margin-left: 5%;
+            margin-right: 5%;
+        }
+    </style>
+</asp:Content>
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="loader"></div>
+
+    <div class="panel panel-default">
+        <%--<div class="panel-heading"><b>Project</b></div>--%>
+        <div class="panel-body">
+            <div id="rootwizard" class="">
+
+                <ul>
+                    <li class="hidden"><a href="#tab1" data-toggle="tab"></a></li>
+                    <li class="hidden"><a href="#MainContent_tabAdmin" data-toggle="tab"></a></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="panel panel-info">
+                        <div class="panel-heading">
+                            <h4 class="text-center"><b>Project Form</b></h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-9"></div>
+                        <div class="col-md-1">
+                            Id:
+                            <asp:Label ID="lblProjectId" runat="server" Text=""></asp:Label>
+                        </div>
+                        <div class="col-md-2">
+                            PI:&nbsp;
+                    <asp:LinkButton runat="server" ID="lnkPI" CommandName="PI" OnCommand="lnkPI_Command" OnClientClick="var originalTarget = document.forms[0].target; document.forms[0].target = '_blank'; setTimeout(function () { document.forms[0].target = originalTarget; }, 1000);">
+                        <asp:Label ID="lblPI" runat="server"></asp:Label>
+                    </asp:LinkButton>
+                        </div>
+                    </div>
+                    <br />
+                    <div class="tab-pane" id="tab1">
+                        <div class="row">
+                            <div class="col-sm-1 text-left">
+                                <label class="control-label" for="txtTitle">PI:</label>
+                            </div>
+                            <div class="col-sm-3">
+                                <ucc:DropDownListChosen ID="ddlPI" runat="server" Width="200px"
+                                    NoResultsText="No results match."
+                                    DataPlaceHolder="Search PI" AllowSingleDeselect="true">
+                                </ucc:DropDownListChosen>
+                            </div>
+                            <%-- <div class="col-sm-1">
+                        <asp:Button ID="btnReset" runat="server" Text="Reset" OnClick="btnRest_Click" class="btn btn-info"/>
+                    </div>--%>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-1 text-left">
+                                <label class="control-label" for="txtFirstName">Project:</label>
+                            </div>
+                            <div class="col-sm-6">
+                                <asp:DropDownList ID="ddlProject" runat="server" CssClass="form-control" OnSelectedIndexChanged="ddlProject_Changed" AutoPostBack="True">
+                                </asp:DropDownList>
+                            </div>
+
+                            <div class="col-sm-1 offset1">
+                                <asp:CheckBox ID="chkBiostat" runat="server" Text="Biostat"></asp:CheckBox>
+                            </div>
+                            <div class="col-sm-1 offset1">
+                                <asp:CheckBox ID="chkBioinfo" runat="server" Text="Bioinfo"></asp:CheckBox>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-1 text-left">
+                                <label class="control-label" for="txtTitle">Title:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <input class="form-control" type="text" name="txtTitle" id="txtTitle" runat="Server" />
+                            </div>
+                            <div class="col-sm-1 hidden">
+                                <asp:DropDownList ID="ddlProjectHdn" runat="server" CssClass="form-control">
+                                </asp:DropDownList>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-1 text-left">
+                                <label class="control-label" for="txtSummary">Summary:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <textarea class="form-control noresize" rows="3" name="txtSummary" id="txtSummary" runat="Server"></textarea>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-1">
+                                <label class="control-label" for="txtInitialDate">Initial date:</label>
+                            </div>
+                            <div class="col-sm-2">
+                                <div class='input-group date' id='dtpInitialDate'>
+                                    <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                                    <asp:TextBox ID="txtInitialDate" runat="server" class="form-control"></asp:TextBox>
+                                </div>
+                            </div>
+                            <div class="col-sm-2 text-right">
+                                <label class="control-label" for="txtDeadline">Deadline:</label>
+                            </div>
+                            <div class="col-sm-2">
+                                <div class='input-group date' id='dtpDeadline'>
+                                    <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                                    <asp:TextBox ID="txtDeadline" runat="server" class="form-control"></asp:TextBox>
+                                </div>
+                            </div>
+
+                            <%--<div class="col-sm-3 text-left">
+                               <label class="control-label" for="txtDeadline">Request received date:</label>
+                            </div>
+                            <div class="col-sm-2">
+                              <div class='input-group date' id='dtpRequestRcvDate'>
+                                 <span class="input-group-addon">
+                                    <span class="glyphicon glyphicon-calendar"></span>
+                                 </span>
+                                 <asp:TextBox ID="txtRequestRcvdDate" runat="server" class="form-control"></asp:TextBox>
+                              </div>
+                            </div>--%>
+                        </div>
+                        <br />
+                        <h5>QHS Faculty/Staff</h5>
+                        <div class="row">
+                            <div class="col-sm-2 text-left">
+                                <label class="control-label" for="txtFirstName">Lead member:</label>
+                            </div>
+                            <div class="col-sm-3">
+                                <asp:DropDownList ID="ddlLeadBiostat" runat="server" CssClass="form-control">
+                                </asp:DropDownList>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label">Other member(s): check all that apply, or indicate N/A</label>
+                            </div>
+                        </div>
+                        <%--<br />--%>
+                        <table class="table table-hover table-borderless" id="tblBiostat">
+                            <tbody>
+                                <asp:Repeater ID="rptBiostat" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td>
+                                                <asp:CheckBox ID="FirstchkId" runat="server"></asp:CheckBox>
+                                                <%--<asp:HiddenField ID="Id1" Value='<%#Eval("Id1")%>' runat="server" />--%>
+                                                <asp:HiddenField ID="FirstBitValue" Value='<%#Eval("BitValue1")%>' runat="server" />
+                                                <%# Eval("Name1") %>
+                                            </td>
+                                            <td>
+                                                <asp:CheckBox ID="SecondchkId" runat="server" Visible='<%# (long)Eval("Id2") > 0 %>'></asp:CheckBox>
+                                                <%--<asp:HiddenField ID="Id2" Value='<%#Eval("Id2")%>' runat="server" />--%>
+                                                <asp:HiddenField ID="SecondBitValue" Value='<%#Eval("BitValue2")%>' runat="server" />
+                                                <%# Eval("Name2") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td>
+                                            <asp:CheckBox ID="FirstchkId" runat="server"></asp:CheckBox>
+                                            <%--<asp:HiddenField ID="Id1" Value='<%#Eval("Id1")%>' runat="server" />--%>
+                                            <asp:HiddenField ID="FirstBitValue" Value='<%#Eval("BitValue1")%>' runat="server" />
+                                            <%# Eval("Name1") %>
+                                        </td>
+                                        <td>
+                                            <asp:CheckBox ID="SecondchkId" runat="server" Visible='<%# (long)Eval("Id2") > 0 %>'></asp:CheckBox>
+                                            <%--<asp:HiddenField ID="Id2" Value='<%#Eval("Id2")%>' runat="server" />--%>
+                                            <asp:HiddenField ID="SecondBitValue" Value='<%#Eval("BitValue2")%>' runat="server" />
+                                            <%# Eval("Name2") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="col-sm-2">
+                                <input class="form-control hidden" type="text" name="txtOtherMemberBitSum" id="txtOtherMemberBitSum" runat="Server" />
+                            </div>
+                        </div>
+
+                        <h5>Study Area</h5>
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label">Check all that apply</label>
+                            </div>
+                        </div>
+                        <%--<br />--%>
+                        <table class="table table-hover table-borderless" id="tblStudyArea">
+                            <tbody>
+                                <asp:Repeater ID="rptStudyArea" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td style="width: 50%">
+                                                <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                                <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                                <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                                <%# Eval("Name") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td style="width: 50%">
+                                            <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                            <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                            <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                            <%# Eval("Name") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" name="txtStudyAreaOther" id="txtStudyAreaOther" runat="Server" />
+                            </div>
+                            <div class="col-sm-2">
+                                <input class="form-control hidden" type="text" name="txtStudyAreaBitSum" id="txtStudyAreaBitSum" runat="Server" />
+                            </div>
+                        </div>
+
+                        <h5>Health Data</h5>
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label">Check all that apply, or indicate N/A</label>
+                            </div>
+                        </div>
+                        <%-- <br />--%>
+                        <table class="table table-hover table-borderless" id="tblHealthData">
+                            <tbody>
+                                <asp:Repeater ID="rptHealthData" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td style="width: 50%">
+                                                <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                                <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                                <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                                <%# Eval("Name") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td style="width: 50%">
+                                            <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                            <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                            <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                            <%# Eval("Name") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" name="txtHealthDataOther" id="txtHealthDataOther" runat="Server" />
+                            </div>
+                            <div class="col-sm-2">
+                                <input class="form-control hidden" type="text" name="txtHealthDataBitSum" id="txtHealthDataBitSum" runat="Server" />
+                            </div>
+                        </div>
+
+                        <h5>Study Type</h5>
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label">Check all that apply</label>
+                            </div>
+                        </div>
+                        <%--<br />--%>
+                        <table class="table table-hover table-borderless" id="tblStudyType">
+                            <tbody>
+                                <asp:Repeater ID="rptStudyType" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td style="width: 50%">
+                                                <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                                <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                                <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                                <%# Eval("Name") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td style="width: 50%">
+                                            <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                            <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                            <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                            <%# Eval("Name") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" name="txtStudyTypeOther" id="txtStudyTypeOther" runat="Server" />
+                            </div>
+                            <div class="col-sm-2">
+                                <input class="form-control hidden" type="text" name="txtStudyTypeBitSum" id="txtStudyTypeBitSum" runat="Server" />
+                            </div>
+                        </div>
+
+                        <h5>Study Population</h5>
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label">Check all that apply, or indicate N/A</label>
+                            </div>
+                        </div>
+                        <%-- <br />--%>
+                        <table class="table table-hover table-borderless" id="tblStudyPopulation">
+                            <tbody>
+                                <asp:Repeater ID="rptStudyPopulation" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td style="width: 50%">
+                                                <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                                <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                                <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                                <%# Eval("Name") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td style="width: 50%">
+                                            <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                            <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                            <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                            <%# Eval("Name") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <div class="col-sm-4" id="divHealthDisparity">
+                                <div class="col-sm-3">
+                                    <label for="chkHealthDisparityYes">Health disparity?</label>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkHealthDisparityYes" runat="server" Text="Yes"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkHealthDisparityNo" runat="server" Text="No"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkHealthDisparityNA" runat="server" Text="N/A"></asp:CheckBox>
+                                </div>
+                            </div>
+                            <div class="col-sm-1"></div>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" name="txtStudyPopulationOther" id="txtStudyPopulationOther" runat="Server" />
+                            </div>
+                            <div class="col-sm-1">
+                                <input class="form-control hidden" type="text" name="txtStudyPopulationBitSum" id="txtStudyPopulationBitSum" runat="Server" />
+                            </div>
+                        </div>
+
+                        <h5>Service</h5>
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label">Check all that apply</label>
+                            </div>
+                        </div>
+                        <%-- <br />--%>
+                        <table class="table table-hover table-borderless" id="tblService">
+                            <tbody>
+                                <asp:Repeater ID="rptService" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td style="width: 50%">
+                                                <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                                <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                                <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                                <%# Eval("Name") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td style="width: 50%">
+                                            <asp:CheckBox ID="chkId" runat="server"></asp:CheckBox>
+                                            <asp:HiddenField ID="Id" Value='<%#Eval("Id")%>' runat="server" />
+                                            <asp:HiddenField ID="BitValue" Value='<%#Eval("BitValue")%>' runat="server" />
+                                            <%# Eval("Name") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div class="row">
+                            <%--<div class="col-sm-6" id="divLetterOfSupport">
+                                <div class="col-sm-3">
+                                    <label for="chkLetterOfSupportYes">Letter of Support only?</label>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkLetterOfSupportYes" runat="server" Text="Yes"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkLetterOfSupportNo" runat="server" Text="No"></asp:CheckBox>
+                                </div>
+                            </div>--%>
+                            <div class="col-sm-6" id="divCollaborativeLOS">
+                                <div class="col-sm-3">
+                                    <label for="chkLOS_Collaborative">Letter of Support Type:</label>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkLOS_Collaborative" runat="server" Text="Collaborative"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkLOS_Noncollaborative" runat="server" Text="Non-Collaborative"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-3">
+                                    <asp:CheckBox ID="chkLOS_NA" runat="server" Text="N/A"></asp:CheckBox>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <input class="form-control" type="text" name="txtServiceOther" id="txtServiceOther" runat="Server" />
+                            </div>
+                            <div class="col-sm-2">
+                                <input class="form-control hidden" type="text" name="txtServiceBitSum" id="txtServiceBitSum" runat="Server" />
+                            </div>
+                        </div>
+                        <br />
+                        <h5>Credit To</h5>
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label">Credit to sister cores</label>
+                            </div>
+                        </div>
+                        <div class="row offset2">
+                            <div class="col-sm-2">
+                                <asp:CheckBox ID="chkCreditToBiostat" runat="server" Text="Biostat Only"></asp:CheckBox>
+                            </div>
+                            <div class="col-sm-2">
+                                <asp:CheckBox ID="chkCreditToBioinfo" runat="server" Text="Bioinfo Only"></asp:CheckBox>
+                            </div>
+                            <div class="col-sm-2">
+                                <asp:CheckBox ID="chkCreditToBoth" runat="server" Text="Biostat and Bioinfo"></asp:CheckBox>
+                            </div>
+                        </div>
+
+                        <h5>Other Description</h5>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-2 text-left">
+                                <label class="control-label">
+                                    Other project description:
+                                </label>
+                            </div>
+                            <div class="col-sm-6">
+                                <table class="table" id="tblDesc">
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <label>
+                                                    Is PI a junior investigator?
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="checkbox" id="chkJuniorPIYes" value="1" runat="server" />Yes
+                                        &nbsp;
+                                        <input type="checkbox" id="chkJuniorPINo" value="0" runat="server" />No
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <label for="chkMentorYes">
+                                                    Does PI have mentor?
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="checkbox" id="chkMentorYes" value="1" runat="server" />Yes
+                                        &nbsp;
+                                        <input type="checkbox" id="chkMentorNo" value="0" runat="server" />No
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <label>
+                                                    Is project an internal study?
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="checkbox" id="chkInternalYes" value="1" runat="server" />Yes
+                                        &nbsp;
+                                        <input type="checkbox" id="chkInternalNo" value="0" runat="server" />No
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <label>
+                                                    Is project a funded infrastructure grant pilot study?
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="checkbox" id="chkPilotYes" value="1" runat="server" />Yes
+                                        &nbsp;
+                                        <input type="checkbox" id="chkPilotNo" value="0" runat="server" />No
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <label>
+                                                    Is this project for a grant proposal?
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="checkbox" id="chkProposalYes" value="1" runat="server" />Yes
+                                        &nbsp;
+                                        <input type="checkbox" id="chkProposalNo" value="0" runat="server" />No
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <label>
+                                                    Is this a paying project?
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="checkbox" id="chkPayingYes" value="1" runat="server" />Yes
+                                        &nbsp;
+                                        <input type="checkbox" id="chkPayingNo" value="0" runat="server" />No
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="row" id="divMentor">
+                            <div class="col-sm-2 text-left">
+                                <label class="control-label" for="txtTitle">Mentor first name:</label>
+                            </div>
+                            <div class="col-sm-2">
+                                <input class="form-control" type="text" name="txtMentorFirstName" id="txtMentorFirstName" runat="Server" />
+                            </div>
+                            <div class="col-sm-2 text-right">
+                                <label class="control-label" for="txtTitle">Mentor last name:</label>
+                            </div>
+                            <div class="col-sm-2">
+                                <input class="form-control" type="text" name="txtMentorLastName" id="txtMentorLastName" runat="Server" />
+                            </div>
+                            <div class="col-sm-1 text-right">
+                                <label class="control-label" for="txtTitle">Email:</label>
+                            </div>
+                            <div class="col-sm-3">
+                                <input class="form-control" type="text" name="txtMentorEmail" id="txtMentorEmail" runat="Server" />
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row" id="divPayProject">
+                            <div class="col-sm-3 text-left">
+                                <label class="control-label" for="txtPayProject">If paying project, type of payment:</label>
+                            </div>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" name="txtPayProject" id="txtPayProject" runat="Server" />
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row divGrantProposal" id="divGrantProposal">
+                            <div class="col-sm-6">
+                                <div class="col-sm-9 text-left">
+                                    <label class="control-label" for="txt">Is this application to a pilot program of a UH infrastructure grant?</label>
+                                </div>
+                                <div class="col-sm-3">
+                                    <input type="checkbox" id="chkIsUHPilotGrantYes" value="1" runat="server" />Yes
+                                        &nbsp;
+                                    <input type="checkbox" id="chkIsUHPilotGrantNo" value="0" runat="server" />No
+                                </div>
+                            </div>
+                            <div class="col-sm-6" id="divUHGrant">
+                                <div class="col-sm-3 text-left">
+                                    <label class="control-label" for="ddlUHGrant">What is the grant?</label>
+                                </div>
+                                <div class="col-sm-6">
+                                    <asp:DropDownList ID="ddlUHGrant" runat="server" CssClass="form-control">
+                                    </asp:DropDownList>
+                                </div>
+                            </div>
+                            <div class="col-sm-6" id="divGrantProposalFundingAgency">
+                                <div class="col-sm-4 text-left">
+                                    <label class="control-label" for="ddlUHGrant">What is the funding agency?</label>
+                                </div>
+                                <div class="col-sm-6">
+                                    <input class="form-control" type="text" name="txtGrantProposalFundingAgency"
+                                        id="txtGrantProposalFundingAgency" runat="Server" />
+                                </div>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row divGrantProposal" id="divGrantProposal2">
+                            <label for="grantTable">Grant Proposal Information</label>
+                            <%--<table id="grantTable" class="display">
+                                <thead>
+                                    <tr>
+                                        <th>Id</th>
+                                        <th>Title</th>
+                                        <th>Status</th>
+                                        <th>Submission Date</th>
+                                    </tr>
+                                </thead>
+                            </table>--%>
+                            <asp:GridView ID="GridViewGrant" runat="server"
+                                OnRowCommand="GridViewGrant_RowCommand"
+                                AutoGenerateColumns="false" AllowPaging="false"
+                                DataKeyNames="Id"
+                                class="table table-striped table-bordered"
+                                EmptyDataText="No <a href='Tracking/GrantForm'><strong>grant</strong></a> record linked.  <em>After saving this form, please go to <a href='Tracking/GrantForm'><strong>grant page</strong></a> and create a new grant entry to link to this project</em>.">
+                                <Columns>
+                                    <asp:TemplateField HeaderText="Id" HeaderStyle-Width="5%">
+                                        <ItemTemplate>
+                                            <asp:LinkButton runat="server" ID="btnGrant" CommandName="editRecord" CommandArgument='<%# Eval("Id") %>'>
+                                                <%--OnClientClick="javascript:return loading();"--%>
+                                                <asp:Label ID="lblGrantId" runat="server" Text='<%# Eval("Id") %>'></asp:Label>
+                                            </asp:LinkButton>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                    <asp:BoundField DataField="PI" HeaderText="PI" HeaderStyle-Width="15%" />
+                                    <asp:BoundField DataField="GrantTitle" HeaderText="Title" HeaderStyle-Width="40%" />
+                                    <asp:BoundField DataField="GrantStatus" HeaderText="Status" HeaderStyle-Width="5%" />
+                                    <asp:BoundField DataField="GrantSubmitDate" HeaderText="Submission Date" HeaderStyle-Width="5%" />
+                                </Columns>
+                            </asp:GridView>
+                        </div>
+
+                        <h5>Funding Source</h5>
+                        <%--<br />--%>
+                        <div class="row">
+                            <div class="col-sm-6 text-left">
+                                <label class="control-label" style="text-align: left;">
+                                    Check all that apply, or indicate N/A.
+                                    <br />
+                                    <em style="font-weight: normal;">(This section is used to mark
+                                    funding sources, <u>not</u> grants acknowledged.)</em><br />
+                                </label>
+                            </div>
+                        </div>
+                        <%--<br />--%>
+                        <table class="table table-hover table-borderless" id="tblGrant">
+                            <tbody>
+                                <asp:Repeater ID="rptGrant" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td style="width: 25%">
+                                                <asp:CheckBox ID="FirstchkId" runat="server"></asp:CheckBox>
+                                                <%--<asp:HiddenField ID="Id1" Value='<%#Eval("Id1")%>' runat="server" />--%>
+                                                <asp:HiddenField ID="FirstBitValue" Value='<%#Eval("BitValue1")%>' runat="server" />
+                                                <%# Eval("Name1") %>
+                                            </td>
+                                            <td style="width: 25%">
+                                                <asp:CheckBox ID="SecondchkId" runat="server" Visible='<%# (int)Eval("Id2") > 0 %>'></asp:CheckBox>
+                                                <%--<asp:HiddenField ID="Id2" Value='<%#Eval("Id2")%>' runat="server" />--%>
+                                                <asp:HiddenField ID="SecondBitValue" Value='<%#Eval("BitValue2")%>' runat="server" />
+                                                <%# Eval("Name2") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td style="width: 25%">
+                                            <asp:CheckBox ID="FirstchkId" runat="server"></asp:CheckBox>
+                                            <%--<asp:HiddenField ID="Id1" Value='<%#Eval("Id1")%>' runat="server" />--%>
+                                            <asp:HiddenField ID="FirstBitValue" Value='<%#Eval("BitValue1")%>' runat="server" />
+                                            <%# Eval("Name1") %>
+                                        </td>
+                                        <td style="width: 25%">
+                                            <asp:CheckBox ID="SecondchkId" runat="server" Visible='<%# (int)Eval("Id2") > 0 %>'></asp:CheckBox>
+                                            <%--<asp:HiddenField ID="Id2" Value='<%#Eval("Id2")%>' runat="server" />--%>
+                                            <asp:HiddenField ID="SecondBitValue" Value='<%#Eval("BitValue2")%>' runat="server" />
+                                            <%# Eval("Name2") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div id="divDeptFund">
+                            <div class="row">
+                                <div class="col-sm-3 col-sm-offset-1">
+                                    <label class="control-label" for="ddlDepartmentFunding">Department Funding</label>
+                                    <asp:DropDownList ID="ddlDepartmentFunding" runat="server" CssClass="form-control">
+                                    </asp:DropDownList>
+                                </div>
+                                <div class="col-sm-1"></div>
+                                <div class="col-sm-3">
+                                    <label class="control-label" for="txtDeptFundOth">Department Funding - Other</label>
+                                    <input class="form-control" type="text" name="txtDeptFundOth" id="txtDeptFundOth" runat="Server" />
+                                </div>
+                                <div class="col-sm-1"></div>
+                                <div class="col-sm-3">
+                                    <label class="control-label" for="txtGrantOther">Other:</label>
+                                    <input class="form-control" type="text" name="txtGrantOther" id="txtGrantOther" runat="Server" />
+                                </div>
+                                <div class="col-sm-2">
+                                    <input class="form-control hidden" type="text" name="txtGrantBitSum" id="txtGrantBitSum" runat="Server" />
+                                </div>
+                            </div>
+                            <br />
+                            <div class="row">
+                                <div id="divDeptFundMou">
+                                    <div class="col-sm-1"></div>
+                                    <div class="col-sm-6">
+                                        <div class="col-sm-4">
+                                            <label for="chkDeptFundMouYes">Is this project supported by an MOU?</label>
+                                        </div>
+                                        <div class="col-sm-1">
+                                            <asp:CheckBox ID="chkDeptFundMouYes" runat="server" Text="Yes"></asp:CheckBox>
+                                        </div>
+                                        <div class="col-sm-1">
+                                            <asp:CheckBox ID="chkDeptFundMouNo" runat="server" Text="No"></asp:CheckBox>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <br />
+
+                        <h5>Acknowledgements</h5>
+                        <%--<br />--%>
+                        <div class="row">
+                            <div class="col-sm-11 text-left">
+                                <label class="control-label" style="text-align: left;">
+                                    Check all that apply, or indicate N/A.
+                                    <br />
+                                    <em style="font-weight: normal;">(This section is used to mark
+                                    entities to acknowledge, which may / may not be in addition to the source of funding.  Funding sources
+                                    have been checked by default; please check/uncheck necessary acknowledgements.)</em><br />
+                                </label>
+                            </div>
+                        </div>
+                        <%--<br />--%>
+                        <table class="table table-hover table-borderless" id="tblAkn">
+                            <tbody>
+                                <asp:Repeater ID="rptAkn" runat="server">
+                                    <ItemTemplate>
+                                        <tr>
+                                            <td style="width: 25%">
+                                                <asp:CheckBox ID="FirstchkId" runat="server"></asp:CheckBox>
+                                                <%--<asp:HiddenField ID="Id1" Value='<%#Eval("Id1")%>' runat="server" />--%>
+                                                <asp:HiddenField ID="FirstBitValue" Value='<%#Eval("BitValue1")%>' runat="server" />
+                                                <%# Eval("Name1") %>
+                                            </td>
+                                            <td style="width: 25%">
+                                                <asp:CheckBox ID="SecondchkId" runat="server" Visible='<%# (int)Eval("Id2") > 0 %>'></asp:CheckBox>
+                                                <%--<asp:HiddenField ID="Id2" Value='<%#Eval("Id2")%>' runat="server" />--%>
+                                                <asp:HiddenField ID="SecondBitValue" Value='<%#Eval("BitValue2")%>' runat="server" />
+                                                <%# Eval("Name2") %>
+                                            </td>
+                                    </ItemTemplate>
+                                    <AlternatingItemTemplate>
+                                        <td style="width: 25%">
+                                            <asp:CheckBox ID="FirstchkId" runat="server"></asp:CheckBox>
+                                            <%--<asp:HiddenField ID="Id1" Value='<%#Eval("Id1")%>' runat="server" />--%>
+                                            <asp:HiddenField ID="FirstBitValue" Value='<%#Eval("BitValue1")%>' runat="server" />
+                                            <%# Eval("Name1") %>
+                                        </td>
+                                        <td style="width: 25%">
+                                            <asp:CheckBox ID="SecondchkId" runat="server" Visible='<%# (int)Eval("Id2") > 0 %>'></asp:CheckBox>
+                                            <%--<asp:HiddenField ID="Id2" Value='<%#Eval("Id2")%>' runat="server" />--%>
+                                            <asp:HiddenField ID="SecondBitValue" Value='<%#Eval("BitValue2")%>' runat="server" />
+                                            <%# Eval("Name2") %>
+                                        </td>
+                                        </tr>
+                                    </AlternatingItemTemplate>
+                                </asp:Repeater>
+                            </tbody>
+                        </table>
+                        <div class="row" id="divAknDeptFund">
+                            <div class="col-sm-3 col-sm-offset-1">
+                                <label class="control-label" for="ddlAknDepartmentFunding">Department Funding</label>
+                                <asp:DropDownList ID="ddlAknDepartmentFunding" runat="server" CssClass="form-control">
+                                </asp:DropDownList>
+                            </div>
+                            <div class="col-sm-1"></div>
+                            <div class="col-sm-3">
+                                <label class="control-label" for="txtAknDeptFundOth">Department Funding - Other</label>
+                                <input class="form-control" type="text" name="txtAknDeptFundOth" id="txtAknDeptFundOth" runat="Server" />
+                            </div>
+                            <div class="col-sm-1"></div>
+                            <div class="col-sm-3">
+                                <label class="control-label" for="txtAknOther">Other:</label>
+                                <input class="form-control" type="text" name="txtAknOther" id="txtAknOther" runat="Server" />
+                            </div>
+                            <div class="col-sm-2">
+                                <input class="form-control hidden" type="text" name="txtAknBitSum" id="txtAknBitSum" runat="Server" />
+                            </div>
+                        </div>
+                        <br />
+
+                        <h5>Phase</h5>
+                        <br />
+                        <asp:UpdatePanel ID="upPhase" runat="server">
+                            <ContentTemplate>
+                                <div>
+                                    <asp:GridView ID="gvPhase" runat="server" AutoGenerateColumns="False"
+                                        ShowFooter="True"
+                                        OnRowDataBound="gvPhase_RowDataBound"
+                                        OnRowDeleting="gvPhase_RowDeleting"
+                                        class="table">
+                                        <Columns>
+                                            <asp:TemplateField HeaderText="Id" Visible="false">
+                                                <ItemTemplate>
+                                                    <asp:Label ID="lblId" runat="server" Text='<%# Eval("Id") %>'></asp:Label>
+                                                </ItemTemplate>
+                                            </asp:TemplateField>
+                                            <asp:TemplateField HeaderText="Phase" HeaderStyle-Width="8%">
+                                                <ItemTemplate>
+                                                    <asp:Label ID="lblPhase" runat="server" Text='<%# Eval("Name") %>' />
+                                                </ItemTemplate>
+                                                <FooterStyle HorizontalAlign="Left" />
+                                                <FooterTemplate>
+                                                    <asp:Button ID="btnAddPhase" runat="server" CssClass="btn btn-info"
+                                                        Text="Add New" OnClick="btnAddPhase_Click" OnClientClick="AddPhase()" />
+                                                </FooterTemplate>
+                                            </asp:TemplateField>
+                                            <asp:TemplateField HeaderText="Agreement" HeaderStyle-Width="12%">
+                                                <ItemTemplate>
+                                                    <asp:Label ID="lblAgmtId" runat="server" Text='<%# Eval("AgmtId") %>'></asp:Label>
+                                                </ItemTemplate>
+                                            </asp:TemplateField>
+                                            <asp:TemplateField HeaderText="Start Date (mm/dd/yyyy)" HeaderStyle-Width="15%">
+                                                <ItemTemplate>
+                                                    <asp:TextBox ID="txtStartDate" runat="server" class="form-control" Text='<%# Eval("StartDate") %>'></asp:TextBox>
+                                                </ItemTemplate>
+                                            </asp:TemplateField>
+                                            <asp:TemplateField HeaderText="Completion Date (mm/dd/yyyy)" HeaderStyle-Width="15%">
+                                                <ItemTemplate>
+                                                    <asp:TextBox ID="txtCompletionDate" runat="server" class="form-control" Text='<%# Eval("CompletionDate") %>'></asp:TextBox>
+                                                </ItemTemplate>
+                                            </asp:TemplateField>
+                                            <asp:TemplateField HeaderText="Title" HeaderStyle-Width="25%">
+                                                <ItemTemplate>
+                                                    <asp:TextBox ID="txtTitle" runat="server" class="form-control" Text='<%# Eval("Title") %>'></asp:TextBox>
+                                                </ItemTemplate>
+                                            </asp:TemplateField>
+                                            <asp:TemplateField HeaderText="Ms Hrs" HeaderStyle-Width="10%">
+                                                <ItemTemplate>
+                                                    <asp:TextBox ID="txtMsHrs" runat="server" class="form-control" Text='<%# Eval("MsHrs") %>'></asp:TextBox>
+                                                </ItemTemplate>
+                                            </asp:TemplateField>
+                                            <asp:TemplateField HeaderText="Phd Hrs" HeaderStyle-Width="10%">
+                                                <ItemTemplate>
+                                                    <asp:TextBox ID="txtPhdHrs" runat="server" class="form-control" Text='<%# Eval("PhdHrs") %>'></asp:TextBox>
+                                                </ItemTemplate>
+                                            </asp:TemplateField>
+
+                                            <asp:TemplateField HeaderText="Del" HeaderStyle-Width="5%">
+                                                <ItemTemplate>
+                                                    <asp:LinkButton ID="lnkDelete" runat="server" Text="Delete" CommandName="Delete"
+                                                        ToolTip="Delete" OnClientClick='return confirm("Are you sure you want to delete this entry?");'
+                                                        CommandArgument=''><img src="images/icon-delete.png" /></asp:LinkButton>
+                                                </ItemTemplate>
+
+                                            </asp:TemplateField>
+                                        </Columns>
+                                    </asp:GridView>
+                                </div>
+
+                            </ContentTemplate>
+                            <%--<Triggers></Triggers>--%>
+                        </asp:UpdatePanel>
+
+                        <%--<table class="table table-bordered table-hover">
+                    <thead class="thead-inverse">
+                        <tr>
+                            <td>Id</td>
+                            <td>Phase</td>
+                            <td>Start Date(mm/dd/yyyy)</td>
+                            <td>Title</td>
+                            <td>Ms Hrs</td>
+                            <td>Phd Hrs</td>
+                            <td>Del</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <asp:Repeater ID="rptPhase" runat="server"
+                            OnItemCommand="cpRepeater_ItemCommand"
+                            OnItemDataBound="cpRepeater_ItemDataBound">
+                            <ItemTemplate>
+                                <tr>
+                                    <td>
+                                        <asp:CheckBox ID="chkDelete" runat="server" />
+                                        <asp:Label ID="lblPhaseId" runat="server" Text='<%# Eval("Id") %>'></asp:Label>
+                                    </td>
+                                    <td>
+                                        <asp:DropDownList ID="ddlPhase" runat="server">
+                                        </asp:DropDownList>
+                                    </td>
+                                    <td>
+                                        <asp:TextBox ID="txtStartDate" runat="server" class="form-control" Text='<%# Eval("StartDate") %>'></asp:TextBox>
+                                    </td>
+                                    <td>
+                                        <asp:TextBox ID="txtTitle" runat="server" class="form-control" Text='<%# Eval("Title") %>'></asp:TextBox>
+                                    </td>
+                                    <td>
+                                        <asp:TextBox ID="txtMsHrs" runat="server" class="form-control" Text='<%# Eval("MsHrs") %>'></asp:TextBox>
+                                    </td>
+                                    <td>
+                                        <asp:TextBox ID="TextBox1" runat="server" class="form-control" Text='<%# Eval("PhdHrs") %>'></asp:TextBox>
+                                    </td>
+                                    <td>
+                                        <asp:LinkButton ID="lnkDelete" runat="server" Text="Delete" CommandName="Delete"
+                                            ToolTip="Delete" OnClientClick='return confirm("Are you sure you want to delete this entry?");'
+                                            CommandArgument=''><img src="images/icon-delete.png" />
+                                        </asp:LinkButton>
+                                    </td>
+                                </tr>
+                            </ItemTemplate>
+                            <FooterTemplate>
+                                <tr style="background-color: #15880a">
+                                    <td colspan="5">
+                                        <asp:Button ID="btnAddPhase" runat="server" CssClass="btn btn-info"
+                                            Text="Add New" OnClick="btnAddPhase_Click" />
+                                    </td>
+                                </tr>
+                            </FooterTemplate>
+                        </asp:Repeater>
+                    </tbody>
+                </table>--%>
+
+                        <div class="row">
+                            <div class="col-sm-5">
+                                <input type="checkbox" id="chkApproved" value="1" runat="server" />&nbsp;<b>Admin reviewed</b>
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="row">
+                            <div class="col-sm-6">
+                            </div>
+                            <div class="col-sm-2">
+                                <asp:Button ID="btnSubmit1" runat="server" Text="Submit" OnClick="btnSubmit1_Click" class="btn btn-primary submitBtn" OnClientClick="ClientSideClick(this)" UseSubmitBehavior="False" />
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="tab-pane" id="tabAdmin" runat="server">
+                        <h5>Admin</h5>
+                        <br />
+
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <input type="checkbox" id="chkIsRmatrix" value="1" runat="server" />&nbsp;RMATRIX-II request for resources
+                            </div>
+                            <div class="col-sm-9">
+                                <div class="row" id="divRmatrixRequest">
+                                    <div class="col-sm-3 text-right">
+                                        <label class="control-label" for="txtTitle">Request number:</label>
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <input class="form-control" type="text" name="txtRmatrixNum" id="txtRmatrixNum" runat="Server" />
+                                    </div>
+                                    <div class="col-sm-3 text-right">
+                                        <label class="control-label" for="txtRmatrixSubDate">Submission date:</label>
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <div class='input-group date' id='dtpRmatrixSubDate'>
+                                            <span class="input-group-addon">
+                                                <span class="glyphicon glyphicon-calendar"></span>
+                                            </span>
+                                            <asp:TextBox ID="txtRmatrixSubDate" runat="server" class="form-control"></asp:TextBox>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <%--<div class="col-sm-5">
+                                <input type="checkbox" id="chkRmatrixReport" value="1" runat="server" />&nbsp;Do not report to RMATRIX
+                            </div>--%>
+                            <div class="col-sm-5">
+                                <input type="checkbox" id="chkReportToRmatrix" value="1" runat="server" />&nbsp;<%--Report--%>Submit to RMATRIX
+                            </div>
+                            <div class="col-sm-5">
+                                <input type="checkbox" id="chkReportToOlaHawaii" value="1" runat="server" />&nbsp;<%--Report--%>Submit to Ola HAWAII
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <input type="checkbox" id="chkIsOlaHawaii" value="1" runat="server" />&nbsp;Ola HAWAII request for resources
+                            </div>
+                            <div class="col-sm-9">
+
+                                <div id="divOlaHawaiiRequest">
+                                    <div class="row">
+                                        <div class="col-sm-3 text-right">
+                                            <label class="control-label" for="txtTitle">Request number:</label>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <input class="form-control" type="text" name="txtOlaHawaiiNum" id="txtOlaHawaiiNum" runat="Server" />
+                                        </div>
+                                        <div class="col-sm-3 text-right">
+                                            <label class="control-label" for="txtOlaHawaiiSubDate">Submission date:</label>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <div class='input-group date' id='dtpOlaHawaiiSubDate'>
+                                                <span class="input-group-addon">
+                                                    <span class="glyphicon glyphicon-calendar"></span>
+                                                </span>
+                                                <asp:TextBox ID="txtOlaHawaiiSubDate" runat="server" class="form-control"></asp:TextBox>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+
+                        <div id="divRequestType">
+                            <div class="row">
+                                <div class="col-sm-2 col-sm-offset-1">
+                                    <label class="control-label">Request Type:</label>
+                                </div>
+                                <div class="col-sm-6"></div>
+                            </div>
+                            <%--<div class="row">
+                                <div class="col-sm-2 col-sm-offset-1">
+                                    <asp:CheckBox ID="chkRequestTypeRfunded" runat="server" Text="R-funded"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-2">
+                                    <asp:CheckBox ID="chkRequestTypePilotPI" runat="server" Text="Pilot PI"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-2">
+                                    <asp:CheckBox ID="chkRequestTypeOther" runat="server" Text="Other"></asp:CheckBox>
+                                </div>
+                            </div>--%>
+                            <div class="row">
+                                <div class="col-sm-2 col-sm-offset-1">
+                                    <asp:CheckBox ID="chkRequestTypeApplication" runat="server" Text="Application"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-2">
+                                    <asp:CheckBox ID="chkRequestTypeFunded" runat="server" Text="Funded"></asp:CheckBox>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-2 col-sm-offset-1">
+                                    <asp:CheckBox ID="chkRequestTypeOlaPilot" runat="server" Text="Ola HAWAII Pilot"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-2">
+                                    <asp:CheckBox ID="chkRequestTypeOlaR21" runat="server" Text="Ola HAWAII R21"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-2">
+                                    <asp:CheckBox ID="chkRequestTypeOlaR01" runat="server" Text="Ola HAWAII R01"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-2">
+                                    <asp:CheckBox ID="chkRequestTypeOlaOther" runat="server" Text="Ola HAWAII Other"></asp:CheckBox>
+                                </div>
+                                <div class="col-sm-1 text-right yearCallWave">
+                                    <label class="control-label" for="txtRequestTypeYear"><span id="olaYear">Year</span><span id="olaCall">Call</span><span id="olaWave">Wave</span>:</label>
+                                </div>
+                                <div class="col-sm-2 yearCallWave">
+                                    <input class="form-control" type="text" name="txtRequestTypeYear" id="txtRequestTypeYear" runat="Server" />
+                                    <asp:CompareValidator runat="server" Operator="DataTypeCheck" Type="Integer" ControlToValidate="txtRequestTypeYear"
+                                        ErrorMessage="Value Must be a whole number" ForeColor="Red" Font-Bold="true"></asp:CompareValidator>
+                                </div>
+                            </div>
+
+                        </div>
+                        <br />
+
+                        <%--<b>Phase Completion:</b>
+                <asp:Repeater ID="rptPhaseCompletion" runat="server">
+                    <HeaderTemplate>
+                        <table class="table table-bordered table-hover" id="tblPhaseCompletion">
+                            <tr>
+                                <th>Phase</th>
+                                <th>Ms Hrs (completed)</th>
+                                <th>Ms Hrs (estimated)</th>
+                                <th>Phd Hrs (completed)</th>
+                                <th>Phd Hrs (estimated)</th>
+                                <th>Completion Date</th>
+                            </tr>
+                    </HeaderTemplate>
+                    <ItemTemplate>
+                        <tr>
+                            <td><%# Eval("Name") %></td>
+                            <td><%# Eval("MsHrsT") %></td>
+                            <td><%# Eval("MsHrs") %></td>
+                            <td><%# Eval("PhdHrsT") %></td>
+                            <td><%# Eval("PhdHrs") %></td>
+                            <td>
+                                <%# Eval("CompletionDate") %>
+                            </td>
+                        </tr>
+                    </ItemTemplate>
+                    <FooterTemplate>
+                        </table>
+                    </FooterTemplate>
+                </asp:Repeater>
+                <br />--%>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <label class="control-label" for="txtCompletionDate">Project completion date:</label>
+                            </div>
+                            <div class="col-sm-2">
+                                <div class='input-group date' id='dtpCompletionDate'>
+                                    <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                                    <asp:TextBox ID="txtCompletionDate" runat="server" class="form-control"></asp:TextBox>
+                                </div>
+                            </div>
+                            <div class="col-sm-2">
+                                <%--<button type="button" ID="btnSurvey" OnClick="ShowSurveyModal()"  class="btn btn-primary">Survey</button>--%>
+                                <asp:Button class="btn btn-primary" ID="btnSurvey" runat="server" Text="Send Client Survey" OnClick="btnSurvey_Click"></asp:Button>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-2">
+                                <label class="control-label" for="txtProjectStatus">Project status:</label>
+                            </div>
+                            <div class="col-sm-5">
+                                <input class="form-control" type="text" name="txtProjectStatus" id="txtProjectStatus" runat="Server" />
+                            </div>
+                            <div class="col-sm-2">
+                                <asp:Button class="btn btn-primary" ID="btnAddGrant" runat="server" Text="Add Fund" OnClick="btnAddGrant_Click"></asp:Button>
+                            </div>
+                        </div>
+                        <br />
+                        <div class="row">
+                            <div class="col-sm-1 text-left">
+                                <label class="control-label" for="txtSummary">Comments:</label>
+                            </div>
+                            <div class="col-sm-6">
+                                <textarea class="form-control noresize" rows="3" name="txtComments" id="txtComments" runat="Server"></textarea>
+                            </div>
+                            <div class="col-sm-2">
+                                <asp:Button ID="btnAdminSubmit" runat="server" Text="Submit" OnClick="btnSubmit1_Click" class="btn btn-primary submitBtn" OnClientClick="ClientSideClick(this);" UseSubmitBehavior="False" />
+                                <button type="button" style="display: none" id="btnShowWarningModal" class="btn btn-primary btn-lg"
+                                    data-toggle="modal" data-target="#warningModal">
+                                    Warning Modal</button>
+                            </div>
+                        </div>
+                        <br />
+                        <hr />
+
+                    </div>
+
+                    <ul class="pager wizard">
+                        <li class="previous first" style="display: none;"><a href="#">First</a></li>
+                        <li class="previous"><a href="#">Previous</a></li>
+                        <li class="next last" style="display: none;"><a href="#">Last</a></li>
+                        <li class="next"><a href="#">Next</a></li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="surveyModal" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">Confirmation</h4>
+                </div>
+                <asp:UpdatePanel ID="upSurvey" runat="server">
+                    <ContentTemplate>
+                        <div class="modal-body">
+                            <asp:Label ID="lblSurveyMsg" runat="server"></asp:Label><br />
+                            <div style="margin-left: .5in" id="divProjectInfo" runat="server">
+                                Project title:
+                                <asp:Label ID="lblProjectTitle" runat="server"></asp:Label><br />
+                                Faculty/Staff:
+                                <asp:Label ID="lblBiostats" runat="server"></asp:Label><br />
+                                Project period:
+                                <asp:Label ID="lblProjectPeriod" runat="server"></asp:Label><br />
+                                <%--Service hours: <asp:Label ID="lblServiceHours" runat="server"></asp:Label><br />--%>
+                            </div>
+                            <br />
+                            <p class="text-warning">The survey can only be sent twice.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            <asp:Button class="btn btn-primary" ID="btnSendSurvey" runat="server" Text="Submit" OnClick="btnSendSurvey_Click" OnClientClick="ClientSideClick(this)" UseSubmitBehavior="False"></asp:Button>
+                        </div>
+                    </ContentTemplate>
+                    <Triggers>
+                        <asp:AsyncPostBackTrigger ControlID="btnSurvey" EventName="Click" />
+                        <asp:AsyncPostBackTrigger ControlID="btnSendSurvey" EventName="Click" />
+                    </Triggers>
+                </asp:UpdatePanel>
+            </div>
+        </div>
+    </div>
+
+    <div id="warningModal" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <img style="height: 100px; width: 100px; display: block; margin-left: auto; margin-right: auto;" src="images/Stop_sign.png" />
+                    <br />
+                    <div id="formIncomplete" class="modal-title">
+                        <h1>Form Incomplete</h1>
+                        <h4 style="font-family: 'Times New Roman'"><em>Project has <u><strong>not</strong></u> been saved!!!</em></h4>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <asp:Label ID="lblWarning" runat="server">Please review the following <u>incomplete</u> fields and resubmit:</asp:Label><br />
+                    <br />
+                    <p class="text-warning" id="textWarning"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <%--<div id="warningModal" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h3 id="formIncomplete" class="modal-title">Form Incomplete</h3>
+                </div>
+                <asp:UpdatePanel ID="UpdatePanel1" runat="server">
+                    <ContentTemplate>
+                        <div class="modal-body">
+                            <label id="lblWarning">Please review the following <u>incomplete</u> form items and try to submit again:</label>
+                            <br />
+                            <p class="text-warning" id="textWarning"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                    </ContentTemplate>
+                    <Triggers>
+                        <asp:AsyncPostBackTrigger ControlID="btnSubmit1" EventName="Click" />
+                        <asp:AsyncPostBackTrigger ControlID="btnAdminSubmit" EventName="Click" />
+                    </Triggers>
+                </asp:UpdatePanel>
+            </div>
+        </div>
+    </div>--%>
+
+    <div class="clearfix"></div>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $(".loader").fadeOut("slow");
+
+            $('#rootwizard').bootstrapWizard({
+                onTabShow: function (tab, navigation, index) {
+                    //$('html, body').animate({scrollTop: $("#rootwizard").offset().top}, 0);
+                    $('#rootwizard').scrollTop(0);
+                }
+            });
+
+            bindProjects();
+            $('#MainContent_ddlPI').change(function (e) {
+                $('#MainContent_ddlProject').val('');   //find('option:first').attr('selected', 'selected');
+                bindProjects();
+
+            });
+
+            // If there is no ID already tied to the project form:
+            var projectId = $("#MainContent_lblProjectId").text();
+            if (projectId == null || projectId == 0) {
+                // (1) Makes "Ola Hawaii" checkbox checked by default in Acknowledgement section.
+                $('#tblAkn').find('td').each(function () {
+                    var _aknCheckBox = $(this).find(":input[name$='chkId']"),
+                        //_aknBitValue = $(this).find(":input[name$='BitValue']").val(),
+                        _aknName = $(this).eq(0).text().trim();
+
+                    if (/*_aknName == 'RMATRIX' || */_aknName == 'Ola HAWAII' || _aknName == 'Submit to Ola HAWAII'
+                        || _aknName == 'Submit to RMATRIX') {
+                        _aknCheckBox.prop("checked", true);
+                    }
+
+
+                });
+
+                // (2) Makes "Submit to Ola HAWAII" and "Submit to RMATRIX" checkboxes checked by default
+                //     in Admin section.
+                $('#MainContent_chkReportToRmatrix').prop('checked', true);
+                $('#MainContent_chkReportToOlaHawaii').prop('checked', true);
+
+
+            }
+
+
+
+
+            // Initializes date for date fields.
+            var initDate = new biostatNS.DatePicker('dtpInitialDate');
+            initDate.init();
+
+            var dueDate = new biostatNS.DatePicker('dtpDeadline');
+            dueDate.init();
+
+            var requestRcvDate = new biostatNS.DatePicker('dtpRequestRcvDate');
+            requestRcvDate.init();
+
+            var rmatrixSubDate = new biostatNS.DatePicker('dtpRmatrixSubDate');
+            rmatrixSubDate.init();
+
+            var olaHawaiiSubDate = new biostatNS.DatePicker('dtpOlaHawaiiSubDate');
+            olaHawaiiSubDate.init();
+
+            var completionDate = new biostatNS.DatePicker('dtpCompletionDate');
+            completionDate.init();
+
+            //TextBoxOtherToggle(tblHealthData);
+            //$('#tblHealthData').on( 'click', 'input[type="checkbox"]', function() {
+            //    //$( this ).closest( 'tr' ).toggleClass( 'green' );
+            //    TextBoxOtherToggle(this.closest('table'));
+            //})
+
+            // ------  Intializes Other/Bitsum functionality, ----------- \\
+            // ------  points to grid of checkboxes for specific section -- \\
+            var tBiostat = new biostatNS.TableToggle(tblBiostat);
+            tBiostat.Click(tblBiostat);
+            $('#tblBiostat').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tBiostat.Click(this.closest('table'));
+                });
+
+            var tStudyArea = new biostatNS.TableToggle(tblStudyArea);
+            tStudyArea.Click(tblStudyArea);
+            $('#tblStudyArea').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tStudyArea.Click(this.closest('table'));
+                });
+
+            var tHealthData = new biostatNS.TableToggle(tblHealthData);
+            tHealthData.Click(tblHealthData);
+            $('#tblHealthData').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tHealthData.Click(this.closest('table'));
+                });
+
+            var tStudyType = new biostatNS.TableToggle(tblStudyType);
+            tStudyType.Click(tblStudyType);
+            $('#tblStudyType').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tStudyType.Click(this.closest('table'));
+                });
+
+            var tStudyPopulation = new biostatNS.TableToggle(tblStudyPopulation);
+            tStudyPopulation.Click(tblStudyPopulation);
+            $('#tblStudyPopulation').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tStudyPopulation.Click(this.closest('table'));
+                });
+
+            var tService = new biostatNS.TableToggle(tblService);
+            tService.Click(tblService);
+            $('#tblService').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tService.Click(this.closest('table'));
+                });
+
+            var tGrant = new biostatNS.TableToggle(tblGrant);
+            tGrant.Click(tblGrant);
+            $('#tblGrant').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tGrant.Click(this.closest('table'));
+                });
+
+            var tAkn = new biostatNS.TableToggle(tblAkn);
+            tAkn.Click(tblAkn);
+            $('#tblAkn').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    tAkn.Click(this.closest('table'));
+                });
+
+            // -- Reveals hidden sections if certain choices are made -- \\
+            ToggleDiv($('#MainContent_chkMentorYes'), $('#divMentor'));
+            ToggleDiv($('#MainContent_chkPayingYes'), $('#divPayProject'));
+            ToggleDiv($('#MainContent_chkProposalYes'), $('.divGrantProposal'));
+            ToggleDiv($('#MainContent_chkIsUHPilotGrantYes'), $('#divUHGrant'));
+            ToggleDiv($('#MainContent_chkIsUHPilotGrantNo'), $('#divGrantProposalFundingAgency'));
+            ToggleDiv($('#MainContent_chkIsRmatrix'), $('#divRmatrixRequest'));
+            ToggleDiv($('#MainContent_chkIsOlaHawaii'), $('#divOlaHawaiiRequest'));
+            ToggleDiv2($('#MainContent_chkIsOlaHawaii'), $('#MainContent_chkReportToOlaHawaii'), $('#divRequestType'));
+            //ToggleDiv($('#MainContent_chkIsOlaHawaii'), $('#divRequestType'));
+            //ToggleDiv($('#MainContent_chkReportToOlaHawaii'), $('#divRequestType'));
+            //ToggleDiv($('#MainContent_rptGrant_SecondchkId_6'), $('#divDeptFund'));
+
+            ToggleDiv($('#MainContent_chkRequestTypeOlaPilot'), $('#olaYear'));
+            ToggleDiv($('#MainContent_chkRequestTypeOlaR21'), $('#olaWave'));
+            ToggleDiv($('#MainContent_chkRequestTypeOlaR01'), $('#olaCall'));
+
+            ToggleDiv4($('#MainContent_chkRequestTypeOlaPilot'), $('#MainContent_chkRequestTypeOlaR01'),
+                $('#MainContent_chkRequestTypeOlaR21'), $('#MainContent_chkRequestTypeOlaOther'), $('.yearCallWave'));
+
+
+            ToggleDiv4($('#MainContent_rptStudyPopulation_chkId_0'),
+                $('#MainContent_rptStudyPopulation_chkId_1'),
+                $('#MainContent_rptStudyPopulation_chkId_2'),
+                $('#MainContent_rptStudyPopulation_chkId_3'),
+                $('#divHealthDisparity'));
+
+            // ToggleDiv($('#MainContent_rptService_chkId_3'), $('#divLetterOfSupport'));
+            ToggleDiv($('#MainContent_rptService_chkId_8'), $('#divCollaborativeLOS'));
+
+
+            // -- Hides/shows certain sections if certain selections are made -- \\
+            $('#MainContent_chkIsRmatrix').change(function () {
+                ToggleDiv($(this), $('#divRmatrixRequest'));
+            });
+
+            $('#MainContent_chkIsOlaHawaii').change(function () {
+                ToggleDiv($(this), $('#divOlaHawaiiRequest'));
+                ToggleDiv($(this), $('#divRequestType'));
+            });
+
+            $('#MainContent_chkReportToRmatrix').change(function () {
+                if ($(this).is(":checked")) {
+                    $('#divRmatrixRequest').hide();
+                }
+            });
+
+            $('#MainContent_chkReportToOlaHawaii').change(function () {
+                ToggleDiv($(this), $('#divRequestType'));
+                if ($(this).is(":checked")) {
+                    $('#divOlaHawaiiRequest').hide();
+                }
+            });
+
+
+            /*ToggleDiv4($('#MainContent_chkRequestTypeOlaPilot'), $('#MainContent_chkRequestTypeOlaR21'),
+                $('#MainContent_chkRequestOlaR01'), null, $('.yearCallWave'));*/
+
+            $('#MainContent_chkRequestTypeOlaPilot').change(function () {
+                ToggleDiv($(this), $('.yearCallWave'));
+                if ($(this).is(":checked")) {
+                    $("#olaYear").show();
+                    $("#olaCall").hide();
+                    $("#olaWave").hide();
+                } else {
+                    $("#olaYear").hide();
+                }
+            });
+
+            $('#MainContent_chkRequestTypeOlaR21').change(function () {
+                ToggleDiv($(this), $('.yearCallWave'));
+                if ($(this).is(":checked")) {
+                    $("#olaYear").hide();
+                    $("#olaCall").hide();
+                    $("#olaWave").show();
+                } else {
+                    $("#olaWave").hide();
+                }
+            });
+
+            $('#MainContent_chkRequestTypeOlaR01').change(function () {
+                ToggleDiv($(this), $('.yearCallWave'));
+                if ($(this).is(":checked")) {
+                    $("#olaYear").hide();
+                    $("#olaCall").show();
+                    $("#olaWave").hide();
+                } else {
+                    $("#olaCall").hide();
+                }
+            });
+
+            $('#MainContent_chkRequestTypeOlaOther').change(function () {
+                if ($(this).is(':checked')) {
+                    $('.yearCallWave').hide();
+                }
+            });
+
+            //If Department funding is checked, show dropdown list.
+            //$('#MainContent_rptGrant_SecondchkId_6').change(function () {
+            //    ToggleDiv($(this), $('#divDeptFund'));
+            //});
+
+            $('#tblDesc').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    if ($(this).is($('#MainContent_chkMentorYes'))) {
+                        ToggleDiv($(this), $('#divMentor'));
+                    }
+
+                    if ($(this).is($('#MainContent_chkPayingYes'))) {
+                        ToggleDiv($(this), $('#divPayProject'));
+                    }
+
+                    if ($(this).is($('#MainContent_chkProposalYes'))) {
+                        ToggleDiv($(this), $('.divGrantProposal'));
+                    }
+
+
+                    if ($(this).is(":checked")) {
+                        if ($(this).val() == 1)
+                            $(this).next().removeAttr("checked");
+                        if ($(this).val() == 0)
+                            $(this).prev().removeAttr("checked");
+
+                        if ($(this).is($('#MainContent_chkMentorNo')))
+                            $('#divMentor').hide();
+
+                        if ($(this).is($('#MainContent_chkPayingNo')))
+                            $('#divPayProject').hide();
+
+                        if ($(this).is($('#MainContent_chkProposalNo')))
+                            $('.divGrantProposal').hide();
+
+
+                    }
+                });
+
+            $('#divGrantProposal').on('click',
+                'input[type="checkbox"]',
+                function () {
+
+                    if ($(this).is($('#MainContent_chkIsUHPilotGrantYes'))) {
+                        ToggleDiv($(this), $('#divUHGrant'));
+                    }
+
+                    if ($(this).is($('#MainContent_chkIsUHPilotGrantNo'))) {
+                        ToggleDiv($(this), $('#divGrantProposalFundingAgency'));
+                    }
+
+                    if ($(this).is(":checked")) {
+                        if ($(this).val() == 1)
+                            $(this).next().removeAttr("checked");
+                        if ($(this).val() == 0) {
+                            $(this).prev().removeAttr("checked");
+                            $('#MainContent_ddlUHGrant').val('');
                         }
-                        db.SaveChanges();
 
-                        //dbTrans.Commit();
 
-                        //BindProject(id);
-                        ddlProject.Items.Add(new ListItem(project.Id + " " + project.Title, project.Id.ToString()));
-                        ddlProject.SelectedValue = project.Id.ToString();
-
-                        var naBitValue = db.ProjectField
-                                           .Where(f => f.IsGrant == true && f.Name == "N/A")
-                                           .Select(g => g.BitValue)
-                                           .FirstOrDefault();
-                        var noFundingBV = db.ProjectField
-                                            .Where(f => f.IsGrant == true && f.Name == "No (no funding)")
-                                            .Select(g => g.BitValue)
-                                            .FirstOrDefault();
-
-                        // Checks if "N/A" is checked for grant section of Project Form.
-                        bool hasNA = (project.GrantBitSum & naBitValue) == naBitValue;
-
-                        // Checks if "No Funding" is checked for grant section of Project Form.
-                        bool hasNoFunding = (project.GrantBitSum & noFundingBV) == noFundingBV;
-
-                        //Sends to fiscal team if its either a paying project and/or funded by a grant (with neither N/A nor "No Funding" unchecked).
-                        bool sendToFiscal = (project.GrantBitSum > 0 && !hasNA && !hasNoFunding && (project.IsPaid == true)) ? true : false; //&& project.IsApproved = 1 ?? 1 : 0;
-
-                        //send email
-                        SendNotificationEmail(id, sendToFiscal);
+                        if ($(this).is($('#MainContent_chkIsUHPilotGrantNo')))
+                            $('#divUHGrant').hide();
+                        if ($(this).is($('#MainContent_chkIsUHPilotGrantYes')))
+                            $('#divGrantProposalFundingAgency').hide();
+                    } else {
+                        $('#MainContent_ddlUHGrant').val('');
                     }
-                    catch (Exception ex)
-                    {
-                        //dbTrans.Rollback();
-                        return ex.InnerException.Message;
+
+                });
+
+            $('#tblStudyPopulation').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    if ($(this).is($('#MainContent_rptStudyPopulation_chkId_0')) // Native Hawaiians,
+                        //--- Pacific Islanders,
+                        //--- and Filipinos
+                        || $(this).is($('#MainContent_rptStudyPopulation_chkId_1')) // Hawaii Populations
+                        || $(this).is($('#MainContent_rptStudyPopulation_chkId_2')) // U.S. Populations
+                        || $(this).is($('#MainContent_rptStudyPopulation_chkId_3')) // International Populations
+                    ) {
+                        ToggleDiv($(this), $('#divHealthDisparity'));
                     }
+                });
+
+            $('#tblService').on('click',
+                'input[type="checkbox"]',
+                function () {
+                    //if ($(this).is($('#MainContent_rptService_chkId_3'))) {
+                    //    ToggleDiv($(this), $('#divLetterOfSupport'));
                     //}
-                }
-                /// If current user is not admin,
-                ///     - prevents non-admin user from making changes if admin already approved.
-                ///     - otherwise, saves current values of database.
-                /// If current user is admin
-                ///     - creates new phase information.
-                else if (id > 0)
-                {
-                    bool isAdmin = Page.User.IsInRole("Admin");
+                    if ($(this).is($('#MainContent_rptService_chkId_8'))) {
+                        ToggleDiv($(this), $('#divCollaborativeLOS'));
+                    }
+                });
 
-                    var prevProject = db.Project2.FirstOrDefault(p => p.Id == id);
-                    if (prevProject.IsApproved && !isAdmin)
-                    {
-                        errorMsg = string.Format("Project {0} can not be updated after approval", id);
+            // -- If exisitng project, adds ability to add grant, invoice, or survey. -- \\
+            var projectId = $("#MainContent_lblProjectId").text();
+            if (projectId > 0) {
+                $("#MainContent_btnAddInvoice").prop("disabled", false);
+                $("#MainContent_btnAddGrant").prop("disabled", false);
+                $("#MainContent_btnSurvey").prop("disabled", false);
+            }
+            else {
+                $("#MainContent_btnAddInvoice").prop("disabled", true);
+                $("#MainContent_btnAddGrant").prop("disabled", true);
+                $("#MainContent_btnSurvey").prop("disabled", true);
+            }
+
+            $(function () {
+                $(':text').bind('keydown', function (e) {
+                    if (e.keyCode == 13) { //if this is enter key
+                        e.preventDefault();
+                        return false;
                     }
                     else
-                    {
-                        //Sends notification of project closure if project has been newly closed
-                        if (prevProject.ProjectCompletionDate.Equals(null) && !project.ProjectCompletionDate.Equals(null))
-                        {
-                            var projectCompleteDate = project.ProjectCompletionDate ?? DateTime.ParseExact("1/1/2099", "MM/dd/yyyy", CultureInfo.InvariantCulture);
+                        return true;
+                });
+            });
 
-                            SendProjectClosureEmail(id, projectCompleteDate);
-                        }
-
-                        //Sends "Admin Reviewed" email to lead QHS Faculty/Staff if admin has reviewed the project.
-                        if (prevProject.IsApproved.Equals(false) && project.IsApproved.Equals(true))
-                        {
-                            var leadBiostatId = project.LeadBiostatId;
-                            var leadBiostatUserName = db.BioStats.FirstOrDefault(b => b.Id == leadBiostatId).LogonId;
-                            var leadBiostatEmail = db.BioStats.FirstOrDefault(b => b.Id == leadBiostatId).Email;
-
-                            string otherMembersUserName = "", otherMembersEmail = "", userName = "", emailSendTo = ""; 
-
-                           // Removed sending to project creator (since most likely project members and/or tracking team).
-                           //var emailToSend = db.BioStats.FirstOrDefault(b => b.Id == leadBiostatId).Email;
-                           // var emailToSend = db.BioStats.FirstOrDefault(b => b.LogonId == prevProject.Creator).Email;
-
-                            //var userName = db.BioStats.FirstOrDefault(b => b.Id == leadBiostatId).LogonId;
-                            //var userName = db.BioStats.FirstOrDefault(b => b.LogonId == prevProject.Creator).LogonId;
+            //$("#MainContent_ddlLeadBiostat").change(function () {
+            //    if ($("#MainContent_ddlLeadBiostat").val() > 0) {
+            //        var biostatSelected = $("#MainContent_ddlLeadBiostat option:selected").text();
 
 
-                            /// Obtain other faculty/staff associated with project to inject into admin reviewed email.
-                            // Given OtherMemberBitSum, pull all members' usernames and email addresses
-                            List<BioStat> otherMembers = new List<BioStat>();
-                            foreach (BioStat b in db.BioStats)
-                            {
-                                if ((project.OtherMemberBitSum & b.BitValue) > 0 && b.BitValue > 0 && b.Name != "N/A")
-                                {
-                                    otherMembers.Add(b);
+            //    }
+            //});
+
+
+        });
+
+        function ShowWarningModal() {
+            $('#btnShowWarningModal').click();
+        }
+
+        var biostatNS = biostatNS || {};
+
+        // TableToggle - Makes "other" appear if "other" checkboxes exists.
+        //               Also creates and adds bitsum for each checkbox checked.
+        biostatNS.TableToggle = function (tableId) {
+            var _table = $(tableId),
+                _textOther = _table.next().find(":input[name$='Other']"),
+                _textBitSum = _table.next().find(":input[name$='BitSum']"),
+                _id = _table.attr('id');
+
+
+            // If the "Other" checkbox is checked, then then the "other" field is displayed.
+            // The bit sum total is added from the bit value of the checkbox.
+            return {
+                Click: function (e) {
+                    var _bitSum = 0;
+
+                    _table.find('td').each(function () {
+                        var _checkBox = $(this).find(":input[name$='chkId']"),
+                            _bitValue = $(this).find(":input[name$='BitValue']").val(),
+                            _name = $(this).eq(0).text().trim();
+
+                        if (_name == 'Other' || _name == 'International Populations') {
+
+                            //alert(_id + ' is the table id');
+
+                            if (_checkBox.is(':checked')) {
+                                _textOther.show();
+
+                                if (_id == 'tblGrant' || _id == 'tblAkn') {
+                                    _textOther.parent().find('label').show();
                                 }
                             }
+                            else {
+                                _textOther.hide();
+                                $(_textOther).val('');
 
-                            // Add to otherMemberUserName and otherMemberEmail
-                            foreach (BioStat b in otherMembers)
-                            {
-                                otherMembersUserName += " " + b.LogonId + ",";
-                                otherMembersEmail += b.Email + ",";
-                            }
-
-                            //if (leadBiostatUserName != userName)
-                            //{
-                            //    emailToSend = emailToSend + "," + leadBiostatEmail;
-                            //    userName = userName + ", " + leadBiostatUserName;
-                            //}
-                            
-
-                            // Combine all usernames and email addresses
-                            userName = leadBiostatUserName + "," + otherMembersUserName;
-                            emailSendTo = leadBiostatEmail + "," + otherMembersEmail;
-
-                            //sTrim end "," of string
-                            userName = userName.TrimEnd(',');
-                            emailSendTo = emailSendTo.TrimEnd(',');
-
-
-                            var investigatorId = project.PIId;
-                            var investigatorName = db.Invests.FirstOrDefault(i => i.Id == investigatorId).FirstName + " " +
-                                                   db.Invests.FirstOrDefault(i => i.Id == investigatorId).LastName;
-
-                            var reviewedBy = User.Identity.Name;
-
-                            SendAdminReviewEmail(id, emailSendTo, userName, investigatorName, reviewedBy);
-                        }
-
-                        //Updates current project with newly-entered values.
-                        db.Entry(prevProject).CurrentValues.SetValues(project);
-                    }
-
-                    isAdmin = isAdmin || Page.User.IsInRole("Biostat");
-                    var prevPhases = db.ProjectPhase.Where(p => p.ProjectId == id);
-                    if (isAdmin)
-                    {
-                        foreach (var phaseDB in prevPhases)
-                        {
-                            if (!newPhases.Any(l => l.Name == phaseDB.Name))
-                            {
-                                //db.ProjectPhase.Remove(phaseDB);
-                                if (phaseDB.TimeEntries.Count == 0)
-                                {
-                                    phaseDB.Title = string.Empty;
-                                    phaseDB.StartDate = null;
-                                    phaseDB.CompletionDate = null;
-                                    phaseDB.MsHrs = null;
-                                    phaseDB.PhdHrs = null;
-                                    phaseDB.IsDeleted = true;
-                                    phaseDB.Creator = Page.User.Identity.Name;
-                                    phaseDB.CreateDate = DateTime.Now;
-                                }
-                                else
-                                {
-                                    errorMsg = string.Format("{0} can not be deleted since logged in time entry", phaseDB.Name);
-                                    return errorMsg;
-                                }
-                            }
-                        }
-                    }
-
-                    foreach (var phase in newPhases)
-                    {
-                        var phaseInDB = db.ProjectPhase.FirstOrDefault(i => i.ProjectId == phase.ProjectId && i.Name == phase.Name);
-
-                        if (phaseInDB != null)
-                        {
-                            if (isAdmin)
-                            {
-                                if (phaseInDB.StartDate != phase.StartDate
-                                    || phaseInDB.CompletionDate != phase.CompletionDate
-                                    || phaseInDB.Title != phase.Title
-                                    || phaseInDB.MsHrs != phase.MsHrs
-                                    || phaseInDB.PhdHrs != phase.PhdHrs
-                                    || phaseInDB.IsDeleted != phase.IsDeleted
-                                    )
-                                {
-                                    phaseInDB.StartDate = phase.StartDate;
-                                    phaseInDB.CompletionDate = phase.CompletionDate;
-                                    phaseInDB.Title = phase.Title;
-                                    phaseInDB.MsHrs = phase.MsHrs;
-                                    phaseInDB.PhdHrs = phase.PhdHrs;
-                                    phaseInDB.IsDeleted = phase.IsDeleted;
-                                    phaseInDB.Creator = Page.User.Identity.Name;
-                                    phaseInDB.CreateDate = DateTime.Now;
+                                if (_id == 'tblGrant' || _id == 'tblAkn') {
+                                    _textOther.parent().find('label').hide();
                                 }
 
-
-                            }
-                            else if (project.IsApproved)
-                            {
-                                errorMsg = "Phase can not be changed, please contact tracking team.";
-                                return errorMsg;
                             }
                         }
-                        else
-                        {
-                            db.ProjectPhase.Add(phase);
-                            errorMsg = string.Empty;
-                        }
-                    }
 
-                    db.SaveChanges();
-                }
+                        // check equivalent checkbox in "funding source (grant)" section to "acknowledgements" section.
+                        if (_id == 'tblGrant') {
+                            // find tblAkn
+                            var _tableAkn = $('#tblAkn'),
+                                _aknBitSum = 0;
+                            // if _checkbox is checked
+                            _checkBox.change(function () {
+                                if (_checkBox.is(':checked')) {
+                                    // find checkbox where _name is tblAkn.checkbox.name
+                                    _tableAkn.find('td').each(function () {
+                                        var _aknCheckBox = $(this).find(":input[name$='chkId']"),
+                                            _aknBitValue = $(this).find(":input[name$='BitValue']").val(),
+                                            _aknName = $(this).eq(0).text().trim();
+                                        if (_name == _aknName) {
+                                            _aknCheckBox.prop('checked', true);
+
+                                            if (_aknName == 'Department Funding') {
+                                                $('#MainContent_ddlAknDepartmentFunding').show();
+                                                $('#MainContent_ddlAknDepartmentFunding').parent().find('label').show();
+
+                                            }
+                                            if (_aknName == 'Other') {
+                                                $('#MainContent_txtAknOther').show();
+                                                $('#MainContent_txtAknOther').parent().find('label').show();
+                                            }
 
-            }
-
-            return errorMsg;
-        }
-
-        /// <summary>
-        /// Checks the following fields to see whether or not they have been filled out in database.
-        /// - PI
-        /// - Project title
-        /// - Lead member
-        /// - Other member
-        /// - Study area
-        /// - Health data
-        /// - Study type
-        /// - Study population
-        /// - Service type
-        /// All other fields are optional.
-        /// </summary>
-        /// <returns>Error message to print out if field(s) is/are empty.</returns>
-        private string ValidateResult()
-        {
-            System.Text.StringBuilder validateResult = new System.Text.StringBuilder();
-
-            int piId = 0;
-            Int32.TryParse(ddlPI.SelectedValue, out piId);
-            if (piId <= 0)
-            {
-                validateResult.Append("PI is required. \\n");
-            }
-
-            if (txtTitle.Value.Equals(string.Empty))
-            {
-                validateResult.Append("Project title is required. \\n");
-            }
-
-            if (txtTitle.Value.Length > 500)
-            {
-                validateResult.Append("Project title is too long. Limit is 500 characters. \\n");
-            }
-
-            if (txtSummary.Value.Length > 4000)
-            {
-                validateResult.Append("Project summary is too long. Limit is 4000 characters. \\n");
-            }
-
-            int leadBiostatId = 0;
-            Int32.TryParse(ddlLeadBiostat.SelectedValue, out leadBiostatId);
-            if (leadBiostatId <= 0)
-            {
-                validateResult.Append("Lead member is required. \\n");
-            }
-
-            //DateTime initialDate;
-            //if (!DateTime.TryParse(txtInitialDate.Text, out initialDate))
-            //{
-            //    validateResult.Append("Initial date is required. \\n");
-            //}
-
-            //int otherMemberBitSum = 0;
-            //Int32.TryParse(txtOtherMemberBitSum.Value, out otherMemberBitSum);
-            long otherMemberBitSum = 0;
-            Int64.TryParse(txtOtherMemberBitSum.Value, out otherMemberBitSum);
-            if (otherMemberBitSum <= 0)
-            {
-                validateResult.Append("Other member is required. \\n");
-            }
-
-            int studyAreaBitSum = 0;
-            Int32.TryParse(txtStudyAreaBitSum.Value, out studyAreaBitSum);
-            if (studyAreaBitSum <= 0)
-            {
-                validateResult.Append("Study area is required. \\n");
-            }
-
-            int healthDataBitSum = 0;
-            Int32.TryParse(txtHealthDataBitSum.Value, out healthDataBitSum);
-            if (healthDataBitSum <= 0)
-            {
-                validateResult.Append("Health data is required. \\n");
-            }
-
-            int studyTypeBitSum = 0;
-            Int32.TryParse(txtStudyTypeBitSum.Value, out studyTypeBitSum);
-            if (studyTypeBitSum <= 0)
-            {
-                validateResult.Append("Study type is required. \\n");
-            }
-
-            int studyPopulationBitSum = 0;
-            Int32.TryParse(txtStudyPopulationBitSum.Value, out studyPopulationBitSum);
-            if (studyPopulationBitSum <= 0)
-            {
-                validateResult.Append("Study population is required. \\n");
-            }
-            else
-            {
-                if ((studyPopulationBitSum != 32 && studyPopulationBitSum > 0) && (!chkHealthDisparityYes.Checked && !chkHealthDisparityNo.Checked && !chkHealthDisparityNA.Checked))
-                {
-                    validateResult.Append("Study population >> Health disparity is required since study population is specifed. \\n");
-                }
-            }
-
-            int serviceBitSum = 0;
-            Int32.TryParse(txtServiceBitSum.Value, out serviceBitSum);
-            if (serviceBitSum <= 0)
-            {
-                validateResult.Append("Service is required. \\n");
-            }
-            else
-            {
-                //if (((serviceBitSum & 16) == 16) && (!chkLetterOfSupportYes.Checked && !chkLetterOfSupportNo.Checked))
-                //{
-                //    validateResult.Append("Service > Grant Proposal Development >> Letter of Support question is required since grant proposal development is specified. \\n");
-                //}
-                if (((serviceBitSum & 1024) == 1024) && (!chkLOS_Collaborative.Checked && !chkLOS_Noncollaborative.Checked && !chkLOS_NA.Checked))
-                {
-                    validateResult.Append("Service > Letter of Support >> Letter of Support Type question is required since \"Letter of Support\" is specified. \\n");
-                }
-            }
-
-            if (!chkBiostat.Checked && !chkBioinfo.Checked)
-            {
-                validateResult.Append("Please indicate if this is a Biostat or Bioinfo project. \\n");
-            }
-
-            if (!chkCreditToBiostat.Checked && !chkCreditToBioinfo.Checked && !chkCreditToBoth.Checked)
-            {
-                validateResult.Append("Please indicate \"Credit To\" field. \\n");
-            }
-
-            int grantBitSum = 0;
-            Int32.TryParse(txtGrantBitSum.Value, out grantBitSum);
-            if (grantBitSum <= 0)
-            {
-                validateResult.Append("Funding source is required. \\n");
-            }
-
-            int aknBitSum = 0;
-            Int32.TryParse(txtAknBitSum.Value, out aknBitSum);
-            if (aknBitSum <= 0)
-            {
-                validateResult.Append("Acknowledgements are required. \\n");
-            }
-
-            if (txtComments.Value.Length > 500)
-            {
-                validateResult.Append("Admin: Comments are too long.  Limit is 500 characters.");
-            }
-
-            return validateResult.ToString();
-        }
-
-        /// <summary>
-        /// NOTE: Currently not being used.
-        /// 
-        /// Returns valid under *all* cases.
-        /// </summary>
-        /// <param name="project"></param>
-        /// <returns>0 if valid, 1 if not valid.</returns>
-        private bool IsValidProject(Project2 project)
-        {
-            bool isValid = true;
-
-            return isValid;
-        }
-
-
-        #region Bind UI
-        /// <summary>
-        /// Populates grids and checkboxes based on what already exists in the database, e.g., 
-        /// list of faculty and staff, "Study Type" checkboxes, etc.
-        /// </summary>
-        private void BindControl()
-        {
-            var dropDownSource = new Dictionary<int, string>();
-
-            using (ProjectTrackerContainer db = new ProjectTrackerContainer())
-            {
-                /// Populates PI dropdown
-                dropDownSource = db.Invests
-                                .Where(i => i.Id > 0)
-                                .OrderBy(d => d.FirstName).ThenBy(l => l.LastName)
-                                .Select(x => new { x.Id, Name = x.FirstName + " " + x.LastName })
-                                .ToDictionary(c => c.Id, c => c.Name);
-                PageUtility.BindDropDownList(ddlPI, dropDownSource, String.Empty);
-
-                /// Populates dropdown of projects.
-                dropDownSource = db.Project2
-                                .OrderByDescending(d => d.Id)
-                                .Select(x => new { x.Id, FullName = (x.Id + " " + x.Title).Substring(0, 99) })
-                                .ToDictionary(c => c.Id, c => c.FullName);
-
-                PageUtility.BindDropDownList(ddlProject, dropDownSource, "Add new project");
-
-                /// Populates dropdown of projects based on selected PI.
-                dropDownSource = db.Project2
-                                .OrderByDescending(d => d.Id)
-                                .Select(x => new { x.Id, FullName = x.Id + " " + x.Invests.FirstName + " " + x.Invests.LastName })
-                                .ToDictionary(c => c.Id, c => c.FullName);
-
-                PageUtility.BindDropDownList(ddlProjectHdn, dropDownSource, "Add new project");
-
-                //dropDownSource = db.ProjectField
-                //                .Where(f => f.IsPhase == true)
-                //                .ToDictionary(c => c.Id, c => c.Name);
-
-                //PageUtility.BindDropDownList(ddlPhaseHdn, dropDownSource, "--- Select ---");
-
-                /// Populates Lead member dropdown (current, active QHS faculty/staff and not 'N/A' marker).
-                var query = db.BioStats
-                            .Where(b => b.EndDate >= DateTime.Now);
-
-                dropDownSource = query
-                                .Where(b => b.Id > 0 && b.Name != "N/A")
-                                .OrderBy(b => b.Name)
-                                .ToDictionary(c => c.Id, c => c.Name);
-
-                PageUtility.BindDropDownList(ddlLeadBiostat, dropDownSource, String.Empty);
-
-                /// Populates dropdown of checkbox grid of other members.
-                var dropDownSource2 = query
-                                .Where(b => b.Id > 0)
-                                .OrderBy(b => b.Id == 99 ? 2 : 1)
-                                .ToDictionary(c => (long)c.BitValue, c => c.Name);
-
-                BindTable2a(dropDownSource2, rptBiostat);
-                //dropDownSource = query
-                //                .Where(b => b.Id > 0)
-                //                .OrderBy(b => b.Id == 99 ? 2 : 1)
-                //                .ToDictionary(c => (int)c.BitValue, c => c.Name);
-
-                //BindTable2(dropDownSource, rptBiostat);
-
-                /// Populates "Study Area" checkbox grid.
-                var qProjectField = db.ProjectField.Where(f => f.IsStudyArea == true).ToList();
-
-                rptStudyArea.DataSource = qProjectField;
-                rptStudyArea.DataBind();
-
-                //dtProjectField.Clear();
-
-                /// Populates "Health Data" checkbox grid.
-                qProjectField = db.ProjectField.Where(f => f.IsHealthData == true).ToList();
-                rptHealthData.DataSource = qProjectField;
-                rptHealthData.DataBind();
-
-                /// Populates "Study Type" checkbox grid.
-                qProjectField = db.ProjectField.Where(f => f.IsStudyType == true).ToList();
-                rptStudyType.DataSource = qProjectField;
-                rptStudyType.DataBind();
-
-                /// Populates "Study Population" checkbox grid.
-                qProjectField = db.ProjectField.Where(f => f.IsStudyPopulation == true).ToList();
-                rptStudyPopulation.DataSource = qProjectField;
-                rptStudyPopulation.DataBind();
-
-                /// Populates "Service" checkbox grid.
-                qProjectField = db.ProjectField.Where(f => f.IsService == true).ToList();
-                rptService.DataSource = qProjectField;
-                rptService.DataBind();
-
-                //BindgvPhase(1);
-                /// Creates the default phase, since the project # -1 is a pseudo-project for initialization.
-                BindPhaseByProject(-1);
-
-                //var qPhase = db.ProjectPhase.Where(p => p.ProjectId == 1120).ToList();
-                //rptPhase.DataSource = qPhase;
-                //rptPhase.DataBind();
-
-                /// Populates "Grant" (Changed to "Funding Source") checkbox grid. 
-                dropDownSource = db.ProjectField
-                                .Where(f => f.IsGrant == true && f.IsFundingSource == true)
-                                .OrderBy(b => b.DisplayOrder)
-                                .ToDictionary(c => c.BitValue, c => c.Name);
-
-                BindTable2(dropDownSource, rptGrant);
-
-                /// Populates "Acknowledgements" checkbox grid.
-                dropDownSource = db.ProjectField
-                                .Where(f => f.IsGrant == true && f.IsAcknowledgment == true)
-                                .OrderBy(b => b.DisplayOrder)
-                                .ToDictionary(c => c.BitValue, c => c.Name);
-
-                BindTable2(dropDownSource, rptAkn);
-
-                /// Populates Funding Source > Department Funding dropdown.
-                dropDownSource = db.JabsomAffils
-                                 .Where(f => f.Name == "Obstetrics, Gynecology, and Women's Health"
-                                          || f.Name == "School of Nursing & Dental Hygiene"
-                                          || f.Id == 96 /*"Other"*/)
-                                 .OrderBy(b => b.Id)
-                                 .ToDictionary(c => c.Id, c => c.Name);
-
-                PageUtility.BindDropDownList(ddlDepartmentFunding, dropDownSource, String.Empty);
-                PageUtility.BindDropDownList(ddlAknDepartmentFunding, dropDownSource, String.Empty); // Duplicate for acknowledgements
-
-
-                // ^^ Populates Other Description > Is project for a grant proposal? 
-                //                                         > Is this application a UH Infrastructure Grant pilot?
-                //                                                 > What is the grant? dropdown.
-                dropDownSource = db.ProjectField
-                                .Where(f => f.IsGrant == true && f.IsFundingSource == true
-                                                              && (f.Name == "RMATRIX"
-                                                               || f.Name == "G12 BRIDGES"
-                                                               || f.Name == "INBRE"
-                                                               || f.Name == "Native and Pacific Islands Health Disparities Research"
-                                                               || f.Name == "COBRE-Cardiovascular"
-                                                               || f.Name == "COBRE-Infectious Diseases"
-                                                               || f.Name == "COBRE-Biogenesis Research"
-                                                               || f.Name == "Ola Hawaii"
-                                                               || f.Name == "P30 UHCC"))
-                                .OrderBy(b => (b.Name == "Ola Hawaii" ? 1 : b.Id))
-                                .ToDictionary(c => c.Id, c => c.Name);
-                PageUtility.BindDropDownList(ddlUHGrant, dropDownSource, String.Empty);
-
-                /// Only Admin are allowed to approve (review) projects.
-                if (!Page.User.IsInRole("Admin"))
-                {
-                    chkApproved.Disabled = true;
-                }
-                else
-                    chkApproved.Disabled = false;
-            }
-
-        }
-
-        /// <summary>
-        /// Finds the project based on the parameter 'projectId' and
-        /// populates the ProjectForm2 field based on the found project.
-        /// </summary>
-        /// <param name="projectId">Id corresponding to referred project.</param>
-        private void BindProject(int projectId)
-        {
-            //Biostat.Model.Project2 project = businessLayer.GetProjectById(projectId);
-
-            //if (project != null)
-            //{
-            //    SetProject(project);
-            //}
-
-            //var dropDownSource = new Dictionary<int, string>();
-            if (projectId > 0)
-            {
-                using (ProjectTrackerContainer db = new ProjectTrackerContainer())
-                {
-                    Project2 project = db.Project2.FirstOrDefault(x => x.Id == projectId);
-
-                    if (project != null)
-                    {
-                        var query = db.BioStats
-                                    .Where(b => b.EndDate >= project.InitialDate);
-
-                        var dropDownSource = query
-                                            .Where(b => b.Id > 0 && b.Name != "N/A")
-                                            .OrderBy(b => b.Name)
-                                            .ToDictionary(c => c.Id, c => c.Name);
-
-                        PageUtility.BindDropDownList(ddlLeadBiostat, dropDownSource, String.Empty);
-
-                        var dropDownSource2 = query
-                                        .Where(b => b.Id > 0)
-                                        .OrderBy(b => b.Id)
-                                        .ToDictionary(c => (long)c.BitValue, c => c.Name);
-
-                        BindTable2a(dropDownSource2, rptBiostat);
-
-                        SetProject(project);
-                    }
-                }
-            }
-            /// Binds empty project if there is no match to existing project in database.
-            else
-            {
-                int piId = 0;
-                Int32.TryParse(ddlPI.SelectedValue, out piId);
-                SetProject(InitProject(piId));
-            }
-
-            //calculate completion phase hours
-            BindPhaseByProject(projectId);
-        }
-
-        
-
-        /// <summary>
-        /// Populates project field based on which project information 
-        /// indicated in parameters. Originally called when projectForm2 Project
-        /// dropdown has been changed to select indicated project.
-        /// </summary>
-        /// <param name="project">Project being referred to.</param>
-        private void SetProject(Project2 project)
-        {
-            lnkPI.CommandArgument = project.PIId.ToString();
-            lblPI.Text = project.Invests != null ? project.Invests.FirstName + " " + project.Invests.LastName : string.Empty;
-            lblProjectId.Text = project.Id > 0 ? project.Id.ToString() : string.Empty;
-
-            ddlPI.SelectedValue = project.PIId > 0 ? project.PIId.ToString() : "";
-            ddlProject.SelectedValue = project.Id > 0 ? project.Id.ToString() : string.Empty;
-            txtTitle.Value = project.Title;
-            txtSummary.Value = project.Summary;
-            txtInitialDate.Text = project.InitialDate.ToShortDateString();
-            txtDeadline.Text = project.DeadLine != null ? Convert.ToDateTime(project.DeadLine).ToShortDateString() : string.Empty;
-
-            ddlLeadBiostat.SelectedValue = project.LeadBiostatId > 0 ? project.LeadBiostatId.ToString() : string.Empty;
-
-            //if (project.OtherMemberBitSum > 0)
-            //{
-            //    BindTable(rptBiostat, (int)project.OtherMemberBitSum);                    
-            //}
-            BindTable1a(rptBiostat, (long)project.OtherMemberBitSum);
-
-            //if (project.StudyAreaBitSum > 0)
-            //{
-            //    BindTable(rptStudyArea, (int)project.StudyAreaBitSum);
-            //    txtStudyAreaOther.Value = project.StudyAreaOther;
-            //}
-            BindTable(rptStudyArea, (int)project.StudyAreaBitSum);
-            txtStudyAreaOther.Value = project.StudyAreaOther;
-
-            //if (project.HealthDateBitSum > 0)
-            //{
-            //    BindTable(rptHealthData, (int)project.HealthDateBitSum);
-            //    txtHealthDataOther.Value = project.HealthDataOther;
-            //}
-            BindTable(rptHealthData, (int)project.HealthDateBitSum);
-            txtHealthDataOther.Value = project.HealthDataOther;
-
-            //if (project.StudyTypeBitSum > 0)
-            //{
-            //    BindTable(rptStudyType, (int)project.StudyTypeBitSum);
-            //    txtStudyTypeOther.Value = project.StudyTypeOther;
-            //}
-            BindTable(rptStudyType, (int)project.StudyTypeBitSum);
-            txtStudyTypeOther.Value = project.StudyTypeOther;
-
-            //if (project.StudyPopulationBitSum > 0)
-            //{
-            //    BindTable(rptStudyPopulation, (int)project.StudyPopulationBitSum);
-            //    txtStudyPopulationOther.Value = project.StudyPopulationOther;
-            //}
-            BindTable(rptStudyPopulation, (int)project.StudyPopulationBitSum);
-            txtStudyPopulationOther.Value = project.StudyPopulationOther;
-
-            //if (project.ServiceBitSum > 0)
-            //{
-            //    BindTable(rptService, (int)project.ServiceBitSum);
-            //    txtServiceOther.Value = project.ServiceOther;
-            //}
-            BindTable(rptService, (int)project.ServiceBitSum);
-            txtServiceOther.Value = project.ServiceOther;
-
-            //if (project.GrantBitSum > 0)
-            //{
-            //    BindTable(rptGrant, (int)project.GrantBitSum);
-            //    txtGrantOther.Value = project.GrantOther;
-            //}
-            BindTable(rptGrant, (int)project.GrantBitSum);
-            txtGrantOther.Value = project.GrantOther;
-            ddlDepartmentFunding.SelectedValue = project.GrantDepartmentFundingType > 0 ? project.GrantDepartmentFundingType.ToString()
-                                                                                        : string.Empty;
-            txtDeptFundOth.Value = project.GrantDepartmentFundingOther;
-
-            BindTable(rptAkn, (int)project.AknBitSum);
-            txtAknOther.Value = project.AknOther;
-            ddlAknDepartmentFunding.SelectedValue = project.AknDepartmentFundingType > 0 ? project.AknDepartmentFundingType.ToString()
-                                                                                         : string.Empty;
-            txtAknDeptFundOth.Value = project.AknDepartmentFundingOther;
-
-            //var projectPhase = project.ProjectPhase;
-            //BindPhase(projectPhase);
-            //BindrptPhaseCompletion(projectPhase);
-
-            //txtRequestRcvdDate.Text = project.RequestRcvdDate != null ? Convert.ToDateTime(project.RequestRcvdDate).ToShortDateString() : string.Empty;
-
-            if (project.IsJuniorPI.HasValue)
-            {
-                bool isJunior = (bool)project.IsJuniorPI;
-                chkJuniorPIYes.Checked = isJunior;
-                chkJuniorPINo.Checked = !isJunior;
-            }
-            else
-            {
-                chkJuniorPIYes.Checked = false;
-                chkJuniorPINo.Checked = false;
-            }
-
-            if (project.HasMentor.HasValue)
-            {
-                bool hasMentor = (bool)project.HasMentor;
-                chkMentorYes.Checked = hasMentor;
-                chkMentorNo.Checked = !hasMentor;
-
-                txtMentorFirstName.Value = project.MentorFirstName;
-                txtMentorLastName.Value = project.MentorLastName;
-                txtMentorEmail.Value = project.MentorEmail;
-            }
-            else
-            {
-                chkMentorYes.Checked = false;
-                chkMentorNo.Checked = false;
-            }
-
-            if (project.IsInternal.HasValue)
-            {
-                bool isInternal = (bool)project.IsInternal;
-                chkInternalYes.Checked = isInternal;
-                chkInternalNo.Checked = !isInternal;
-            }
-            else
-            {
-                chkInternalYes.Checked = false;
-                chkInternalNo.Checked = false;
-            }
-
-            if (project.IsPilot.HasValue)
-            {
-                bool isPilot = (bool)project.IsPilot;
-                chkPilotYes.Checked = isPilot;
-                chkPilotNo.Checked = !isPilot;
-            }
-            else
-            {
-                chkPilotYes.Checked = false;
-                chkPilotNo.Checked = false;
-            }
-
-            if (project.IsGrantProposal.HasValue)
-            {
-                bool isGrantProposal = (bool)project.IsGrantProposal;
-                chkProposalYes.Checked = isGrantProposal;
-                chkProposalNo.Checked = !isGrantProposal;
-            }
-
-            if (project.IsUHGrant.HasValue)
-            {
-                bool isUHGrant = (bool)project.IsUHGrant;
-                chkIsUHPilotGrantYes.Checked = isUHGrant;
-                chkIsUHPilotGrantNo.Checked = !isUHGrant;
-
-                ddlUHGrant.SelectedValue = project.UHGrantID > 0 ? project.UHGrantID.ToString() : string.Empty;
-                txtGrantProposalFundingAgency.Value = project.GrantProposalFundingAgency;
-            }
-
-            if (project.IsPaid.HasValue)
-            {
-                bool isPaying = (bool)project.IsPaid;
-                chkPayingYes.Checked = isPaying;
-                chkPayingNo.Checked = !isPaying;
-
-                txtPayProject.Value = project.TypeOfPayment;
-            }
-            else
-            {
-                chkPayingYes.Checked = false;
-                chkPayingNo.Checked = false;
-            }
-
-
-            if (project.IsRmatrixRequest.HasValue)
-            {
-                chkIsRmatrix.Checked = (bool)project.IsRmatrixRequest;
-
-                txtRmatrixNum.Value = project.RmatrixNum.ToString();
-                txtRmatrixSubDate.Text = project.RmatrixSubDate != null ? Convert.ToDateTime(project.RmatrixSubDate).ToShortDateString() : string.Empty;
-            }
-            else
-            {
-                chkIsRmatrix.Checked = false;
-            }
-
-            //chkRmatrixReport.Checked = project.IsRmatrixReport.HasValue ? (bool)project.IsRmatrixReport : false;
-            chkReportToRmatrix.Checked = project.IsRmatrixReport == true || project.IsRmatrixReport == null ? false : true;
-            chkReportToOlaHawaii.Checked = project.IsReportOlaHawaii == true || project.IsReportOlaHawaii == null ? false : true;
-
-            if (project.IsOlaHawaiiRequest.HasValue)
-            {
-                chkIsOlaHawaii.Checked = (bool)project.IsOlaHawaiiRequest;
-
-                txtOlaHawaiiNum.Value = project.OlaHawaiiNum.ToString();
-                txtOlaHawaiiSubDate.Text = project.OlaHawaiiSubDate != null ? Convert.ToDateTime(project.OlaHawaiiSubDate).ToShortDateString() : string.Empty;
-
-               // chkRequestTypeRfunded.Checked = project.OlaHawaiiRequestType == (byte)OlaHawaiiRequestType.Rfunded;
-               // chkRequestTypePilotPI.Checked = project.OlaHawaiiRequestType == (byte)OlaHawaiiRequestType.PilotPI;
-               // chkRequestTypeOther.Checked = project.OlaHawaiiRequestType == (byte)OlaHawaiiRequestType.Other;
-
-            }
-            else
-            {
-                chkIsOlaHawaii.Checked = false;
-            }
-
-            if (project.IsOlaHawaiiRequest.HasValue || project.IsReportOlaHawaii.HasValue)
-            {
-                // request type
-                chkRequestTypeFunded.Checked = project.OlaHIRequestType == (byte)OlaHIRequestType.Funded;
-                chkRequestTypeApplication.Checked = project.OlaHIRequestType == (byte)OlaHIRequestType.Application;
-
-                // project type
-                chkRequestTypeOlaPilot.Checked = project.OlaHIProjectType == (byte)OlaHIRequestType.OlaHIPilot;
-                chkRequestTypeOlaR21.Checked = project.OlaHIProjectType == (byte)OlaHIRequestType.OlaHIR21;
-                chkRequestTypeOlaR01.Checked = project.OlaHIProjectType == (byte)OlaHIRequestType.OlaHIR01;
-                chkRequestTypeOlaOther.Checked = project.OlaHIProjectType == (byte)OlaHIRequestType.OlaHIOther;
-
-                // request year
-                txtRequestTypeYear.Value = project.OlaHIRequestYear.ToString();
-
-            }
-
-            if (project.IsHealthDisparity.HasValue)
-            {
-                chkHealthDisparityYes.Checked = project.IsHealthDisparity == (byte)HealthDisparityType.Yes;
-                chkHealthDisparityNo.Checked = project.IsHealthDisparity == (byte)HealthDisparityType.No;
-                chkHealthDisparityNA.Checked = project.IsHealthDisparity == (byte)HealthDisparityType.NA;
-            }
-
-            //if (project.IsLetterOfSupport.HasValue)
-            //{
-            //    chkLetterOfSupportYes.Checked = project.IsLetterOfSupport == (byte)HealthDisparityType.Yes;
-            //    chkLetterOfSupportNo.Checked = project.IsLetterOfSupport == (byte)HealthDisparityType.No;
-            //}
-
-            if (project.IsLosCollaborative.HasValue)
-            {
-                chkLOS_Collaborative.Checked = project.IsLosCollaborative == (byte)HealthDisparityType.Yes;
-                chkLOS_Noncollaborative.Checked = project.IsLosCollaborative == (byte)HealthDisparityType.No;
-                chkLOS_NA.Checked = project.IsLosCollaborative == (byte)HealthDisparityType.NA;
-            }
-
-            if (project.IsMOU.HasValue)
-            {
-                chkDeptFundMouYes.Checked = project.IsMOU == (byte)HealthDisparityType.Yes;
-                chkDeptFundMouNo.Checked = project.IsMOU == (byte)HealthDisparityType.No;
-            }
-
-
-            txtProjectStatus.Value = project.ProjectStatus;
-            txtCompletionDate.Text = project.ProjectCompletionDate != null ? Convert.ToDateTime(project.ProjectCompletionDate).ToShortDateString() : string.Empty;
-
-            txtComments.Value = project.Comments;
-            chkApproved.Checked = project.IsApproved;
-
-            if (!Page.User.IsInRole("Admin"))
-            {
-                chkApproved.Disabled = true;
-            }
-            else
-                chkApproved.Disabled = false;
-
-            chkBiostat.Checked = project.ProjectType == (byte)ProjectType.Biostat;
-            chkBioinfo.Checked = project.ProjectType == (byte)ProjectType.Bioinfo;
-
-            chkCreditToBiostat.Checked = project.CreditTo == (byte)ProjectType.Biostat;
-            chkCreditToBioinfo.Checked = project.CreditTo == (byte)ProjectType.Bioinfo;
-            chkCreditToBoth.Checked = project.CreditTo == (byte)ProjectType.Both;
-        }
-
-        /// <summary>
-        /// Binds the phase information based on the current project for the project form.
-        /// </summary>
-        /// <param name="projectId">Referenced Project ID.</param>
-        private void BindPhaseByProject(int projectId)
-        {
-            DataTable dt = CreatePhaseTable(projectId);
-
-            gvPhase.DataSource = dt;
-            gvPhase.DataBind();
-
-            //rptPhaseCompletion.DataSource = dt;
-            //rptPhaseCompletion.DataBind();
-        }
-
-        /// <summary>
-        /// Obtains the written phase information on the form and adds them to the database.
-        /// </summary>
-        /// <param name="rowIndex">Referenced row index of Phase table/grid.</param>
-        private void BindPhaseByIndex(int rowIndex)
-        {
-            DataTable dt = CreatePhaseTable(0);
-            DataRow dr;
-
-            int lastPhase = 0;
-            foreach (GridViewRow row in gvPhase.Rows)
-            {
-                if (row.RowIndex != rowIndex)
-                {
-                    Label lblId = row.FindControl("lblId") as Label;
-                    Label lblPhase = row.FindControl("lblPhase") as Label;
-                    TextBox txtStartDate = row.FindControl("txtStartDate") as TextBox;
-                    TextBox txtCompletionDate = row.FindControl("txtCompletionDate") as TextBox;
-                    TextBox txtTitle = row.FindControl("txtTitle") as TextBox;
-                    TextBox txtMsHrs = row.FindControl("txtMsHrs") as TextBox;
-                    TextBox txtPhdHrs = row.FindControl("txtPhdHrs") as TextBox;
-                    Label agmtId = row.FindControl("lblAgmtId") as Label;
-
-                    dr = dt.NewRow();
-                    dr["Id"] = lblId.Text;
-                    dr["Name"] = lblPhase.Text;
-                    dr["Title"] = txtTitle.Text;
-                    dr["MsHrs"] = txtMsHrs.Text;
-                    dr["PhdHrs"] = txtPhdHrs.Text;
-                    dr["StartDate"] = txtStartDate.Text;
-                    dr["CompletionDate"] = txtCompletionDate.Text;
-                    dr["AgmtId"] = agmtId.Text;
-
-                    dt.Rows.Add(dr);
-
-                    string[] sPhase = lblPhase.Text.Split('-');
-                    Int32.TryParse(sPhase[1], out lastPhase);
-                }
-            }
-
-            if (rowIndex < 0 || dt.Rows.Count == 0)
-            {
-                lastPhase += 1;
-                dr = dt.NewRow();
-                dr[1] = "Phase-" + lastPhase;
-                dt.Rows.Add(dr);
-            }
-
-            gvPhase.DataSource = dt;
-            gvPhase.DataBind();
-
-            //rptPhaseCompletion.DataSource = dt;
-            //rptPhaseCompletion.DataBind();
-        }
-
-        /// <summary>
-        /// Auto-populates Phase and Agreement sections of the phase grid/table with data specific
-        /// to the referred data row. Creates delete button if there is not an attached 
-        /// agreement to a phase yet.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void gvPhase_RowDataBound(object sender, GridViewRowEventArgs e)
-        {
-            if (e.Row.RowType == DataControlRowType.DataRow)
-            {
-                Label lblAgmtId = e.Row.FindControl("lblAgmtId") as Label;
-                Label lblPhase = e.Row.FindControl("lblPhase") as Label;
-
-                if (lblPhase != null && lblAgmtId != null)
-                {
-                    if (lblPhase.Text == "Phase-0" || lblAgmtId.Text != string.Empty)
-                    {
-                        LinkButton lb = e.Row.FindControl("lnkDelete") as LinkButton;
-                        if (lb != null)
-                            lb.Visible = false;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Fundamentally deletes row being referred to by creating a new instance of the grid,
-        /// copying all the other rows (phase 0 can't be deleted), and replacing the information
-        /// from the new grid into the database.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void gvPhase_RowDeleting(object sender, GridViewDeleteEventArgs e)
-        {
-            GridViewRow row = gvPhase.Rows[e.RowIndex];
-
-            if (row != null)
-            {
-                BindPhaseByIndex(e.RowIndex);
-            }
-        }
-
-        /// <summary>
-        /// Initializes a new row for the phase grid/table.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void btnAddPhase_Click(object sender, EventArgs e)
-        {
-            BindPhaseByIndex(-1);
-        }
-
-        /// <summary>
-        /// Creates a link to the PI of the referred project if there is
-        /// PI information already specified in the PI dropdown.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void lnkPI_Command(object sender, CommandEventArgs e)
-        {
-            int id = 0;
-            //int.TryParse(e.CommandArgument as string, out id);
-            int.TryParse(ddlPI.SelectedValue, out id);
-
-            if (id > 0)
-            {
-                Response.Redirect("~/PI?Id=" + id);
-            }
-
-        }
-
-        /// <summary>
-        /// When 'PI' dropdown is changed,
-        /// program changes project dropdown choices with the projects the PI is associated with.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void ddlPI_Changed(Object sender, EventArgs e)
-        {
-            BindProject(-1);
-        }
-
-        /// <summary>
-        /// When 'Project' dropdown is changed,
-        /// program fills out project fields in relation to the project based on the selected project
-        /// through BindProject(projectId) > SetProject(project).
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void ddlProject_Changed(Object sender, EventArgs e)
-        {
-            //BindProject(-1);
-
-            int projectId = 0;
-            projectId = Int32.TryParse(ddlProject.SelectedValue, out projectId) ? projectId : -1;
-
-            BindProject(projectId);
-
-            //lblMsg.Text = selectedProjectId.ToString();
-        }
-
-        #endregion
-
-        #region Add Update 
-
-        #endregion
-
-        #region Other
-        //private DataTable CreatePhaseTable(ICollection<ProjectPhase> phases, bool hasRow)
-        /// <summary>
-        /// If there is a referenced project, sets up a new phase grid/table with the default Phase-0 
-        /// consultation hours of 1 MS and 1 PhD hours.
-        /// </summary>
-        /// <param name="projectId">Referenced project ID.</param>
-        /// <returns>New table with phase ID, Phase Name, Title, Estimated MS Hours, Estimated 
-        ///          PhD Hours, Start Date, Completion Date, and corresponding Agreement ID.</returns>
-        private DataTable CreatePhaseTable(int projectId)
-        {
-            DataTable dt = new DataTable();
-            dt.Columns.Add("Id");
-            dt.Columns.Add("Name");
-            dt.Columns.Add("Title");
-            dt.Columns.Add("MsHrs");
-            dt.Columns.Add("PhdHrs");
-            dt.Columns.Add("StartDate");
-            dt.Columns.Add("CompletionDate");
-            dt.Columns.Add("AgmtId");
-
-            if (projectId != 0)
-            {
-                using (ProjectTrackerContainer db = new ProjectTrackerContainer())
-                {
-                    var phases = db.ProjectPhase
-                                   .Where(p => p.ProjectId == projectId && p.IsDeleted == false)
-                                   //.OrderBy(p=>p.Name.Substring(p.Name.IndexOf("-")+1, p.Name.Length))
-                                   .OrderBy(p => p.Name.Length).ThenBy(p => p.Name)
-                                   .ToList();
-
-                    if (phases == null || phases.Count == 0)
-                    {
-                        phases = new List<ProjectPhase>();
-                        var newPhase = new ProjectPhase()
-                        {
-                            Name = "Phase-0",
-                            Title = "Consultation",
-                            MsHrs = 1.0m,
-                            PhdHrs = 1.0m
-                        };
-
-                        phases.Add(newPhase);
-                    }
-
-                    foreach (var phase in phases)
-                    {
-                        var agmt = db.ClientAgmt.FirstOrDefault(a => a.Project2Id == projectId && a.ProjectPhase == phase.Name);
-
-                        DataRow dr = dt.NewRow();
-                        dr[0] = phase.Id;
-                        dr[1] = phase.Name;
-                        dr[2] = phase.Title;
-                        dr[3] = phase.MsHrs;
-                        dr[4] = phase.PhdHrs;
-                        dr[5] = phase.StartDate != null ? Convert.ToDateTime(phase.StartDate).ToShortDateString() : "";
-                        dr[6] = phase.CompletionDate != null ? Convert.ToDateTime(phase.CompletionDate).ToShortDateString() : "";
-                        dr[7] = agmt != null ? agmt.AgmtId : "";
-
-                        //decimal dMsOut = 0.0m,
-                        //        dPhdOut = 0.0m;
-                        //if (phase.ProjectId > 0)
-                        //{
-                        //    //total spent hours                        
-                        //    DateTime startDate = new DateTime(2000, 1, 1), endDate = new DateTime(2099, 1, 1);
-                        //    //ObjectParameter startDate = new ObjectParameter("StartDate", typeof(DateTime?));
-                        //    //ObjectParameter endDate = new ObjectParameter("EndDate", typeof(DateTime?));
-                        //    ObjectParameter phdHours = new ObjectParameter("PhdHours", typeof(decimal));
-                        //    ObjectParameter msHours = new ObjectParameter("MSHours", typeof(decimal));
-                        //    var i = db.P_PROJECTPHASE_HOURS(phase.ProjectId, phase.Name, startDate, endDate, phdHours, msHours);
-                        //    db.SaveChanges();
-
-                        //    Decimal.TryParse(phdHours.Value.ToString(), out dPhdOut);
-                        //    Decimal.TryParse(msHours.Value.ToString(), out dMsOut);
-                        //}
-
-                        //dr[8] = dMsOut;
-                        //dr[9] = dPhdOut;
-
-                        dt.Rows.Add(dr);
-                    }
-
-                }
-            }
-
-            return dt;
-        }
-        /// <summary>
-        /// Binds grid of checkboxes to the values of referred table.
-        /// </summary>
-        /// <param name="rpt">Grid of Checkboxes (e.g., rptBiostat = List of Biostat Members)</param>
-        /// <param name="bitSum">Bitsum of referred field to match grid of checkboxes. 
-        ///                      (e.g., Bitsum 894224 = Chelu & Ved [pseudoexample])</param>
-        private void BindTable(Repeater rpt, int bitSum)
-        {
-            foreach (RepeaterItem i in rpt.Items)
-            {
-                CheckBox cb, cb1, cb2;
-                HiddenField hdnBitValue, hdnBitValue1, hdnBitValue2;
-
-                cb = (CheckBox)i.FindControl("chkId");
-                hdnBitValue = (HiddenField)i.FindControl("BitValue");
-
-                if (cb != null && hdnBitValue != null)
-                {
-                    cb.Checked = bitSum > 0 ? CheckBitValue(bitSum, hdnBitValue) : false;
-                }
-
-                if (cb == null)
-                {
-                    cb1 = (CheckBox)i.FindControl("FirstchkId");
-                    cb2 = (CheckBox)i.FindControl("SecondchkId");
-
-                    hdnBitValue1 = (HiddenField)i.FindControl("FirstBitValue");
-                    hdnBitValue2 = (HiddenField)i.FindControl("SecondBitValue");
-
-                    if (cb1 != null && hdnBitValue1 != null)
-                    {
-                        cb1.Checked = bitSum > 0 ? CheckBitValue(bitSum, hdnBitValue1) : false;
-                    }
-
-                    if (cb2 != null && hdnBitValue2 != null)
-                    {
-                        cb2.Checked = bitSum > 0 ? CheckBitValue(bitSum, hdnBitValue2) : false;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Binds grid of checkboxes to the values of referred table.
-        /// 
-        /// Same functionality as BindTable(), but receives values of "long" in lieu of "int".
-        /// </summary>
-        /// <param name="rpt">Grid of Checkboxes (e.g., rptBiostat = List of Biostat Members)</param>
-        /// <param name="bitSum">Bitsum of referred field to match grid of checkboxes. 
-        ///                      (e.g., Bitsum 894224 = Chelu & Ved [pseudoexample])</param>
-        private void BindTable1a(Repeater rpt, long bitSum)
-        {
-            foreach (RepeaterItem i in rpt.Items)
-            {
-                CheckBox cb, cb1, cb2;
-                HiddenField hdnBitValue, hdnBitValue1, hdnBitValue2;
-
-                cb = (CheckBox)i.FindControl("chkId");
-                hdnBitValue = (HiddenField)i.FindControl("BitValue");
-
-                if (cb != null && hdnBitValue != null)
-                {
-                    cb.Checked = bitSum > 0 ? CheckBitValue2(bitSum, hdnBitValue) : false;
-                }
-
-                if (cb == null)
-                {
-                    cb1 = (CheckBox)i.FindControl("FirstchkId");
-                    cb2 = (CheckBox)i.FindControl("SecondchkId");
-
-                    hdnBitValue1 = (HiddenField)i.FindControl("FirstBitValue");
-                    hdnBitValue2 = (HiddenField)i.FindControl("SecondBitValue");
-
-                    if (cb1 != null && hdnBitValue1 != null)
-                    {
-                        cb1.Checked = bitSum > 0 ? CheckBitValue2(bitSum, hdnBitValue1) : false;
-                    }
-
-                    if (cb2 != null && hdnBitValue2 != null)
-                    {
-                        cb2.Checked = bitSum > 0 ? CheckBitValue2(bitSum, hdnBitValue2) : false;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Binds grid of checkboxes with choices for selected areas (faculty/staff, etc).
-        /// </summary>
-        /// <param name="collection">List of choices for given selected area.</param>
-        /// <param name="rpt">Grid for selected area.</param>
-        private void BindTable2(Dictionary<int, string> collection, Repeater rpt)
-        {
-            DataTable dt = new DataTable("tblRpt");
-
-            dt.Columns.Add("Id1", System.Type.GetType("System.Int32"));
-            dt.Columns.Add("Name1", System.Type.GetType("System.String"));
-            dt.Columns.Add("BitValue1", System.Type.GetType("System.Int32"));
-
-            dt.Columns.Add("Id2", System.Type.GetType("System.Int32"));
-            dt.Columns.Add("Name2", System.Type.GetType("System.String"));
-            dt.Columns.Add("BitValue2", System.Type.GetType("System.Int32"));
-
-            var query = collection.ToArray();
-
-            for (int i = 0; i < query.Length; i += 2)
-            {
-                DataRow dr = dt.NewRow();
-
-                dr[0] = query[i].Key;
-                dr[1] = query[i].Value;
-                dr[2] = query[i].Key;
-
-                if (i < query.Length - 1)
-                {
-                    dr[3] = query[i + 1].Key;
-                    dr[4] = query[i + 1].Value;
-                    dr[5] = query[i + 1].Key;
-                }
-                else
-                {
-                    dr[3] = 0;
-                    dr[4] = "";
-                    dr[5] = 0;
-                }
-
-                dt.Rows.Add(dr);
-            }
-
-            rpt.DataSource = dt;
-            rpt.DataBind();
-        }
-
-        /// <summary>
-        /// Binds grid of checkboxes with choices for selected areas (faculty/staff, etc).
-        /// Same functionality as BindTable2, but allowing the use of long in lieu of int.
-        /// </summary>
-        /// <param name="collection">List of choices for given selected area.</param>
-        /// <param name="rpt">Grid for selected area.</param>
-        private void BindTable2a(Dictionary<long, string> collection, Repeater rpt)
-        {
-
-            DataTable dt = new DataTable("tblRpt");
-
-            dt.Columns.Add("Id1", System.Type.GetType("System.Int64"));
-            dt.Columns.Add("Name1", System.Type.GetType("System.String"));
-            dt.Columns.Add("BitValue1", System.Type.GetType("System.Int64"));
-
-            dt.Columns.Add("Id2", System.Type.GetType("System.Int64"));
-            dt.Columns.Add("Name2", System.Type.GetType("System.String"));
-            dt.Columns.Add("BitValue2", System.Type.GetType("System.Int64"));
-
-            var query = collection.ToArray();
-
-            for (int i = 0; i < query.Length; i += 2)
-            {
-                DataRow dr = dt.NewRow();
-
-                dr[0] = query[i].Key;
-                dr[1] = query[i].Value;
-                dr[2] = query[i].Key;
-
-                if (i < query.Length - 1)
-                {
-                    dr[3] = query[i + 1].Key;
-                    dr[4] = query[i + 1].Value;
-                    dr[5] = query[i + 1].Key;
-                }
-                else
-                {
-                    dr[3] = 0;
-                    dr[4] = "";
-                    dr[5] = 0;
-                }
-
-                dt.Rows.Add(dr);
-            }
-
-            rpt.DataSource = dt;
-            rpt.DataBind();
-        }
-
-        /// <summary>
-        /// Creates a new project with nothing initialized.
-        /// </summary>
-        /// <param name="piId">Id = 0</param>
-        /// <returns>New, initialized project with no values.</returns>
-        private Project2 InitProject(int piId)
-        {
-            Project2 project = new Project2()
-            {
-                Id = 0,
-                PIId = piId > 0 ? piId : -1,
-                Title = "",
-                Summary = "",
-                InitialDate = DateTime.Now,
-                DeadLine = (DateTime?)null,
-                LeadBiostatId = -1,
-                OtherMemberBitSum = 0,
-                StudyAreaBitSum = 0,
-                StudyAreaOther = "",
-                HealthDateBitSum = 0,
-                HealthDataOther = "",
-                StudyTypeBitSum = 0,
-                StudyTypeOther = "",
-                StudyPopulationBitSum = 0,
-                StudyPopulationOther = "",
-                IsHealthDisparity = 0,
-                ServiceBitSum = 0,
-                ServiceOther = "",
-                IsLetterOfSupport = 0,
-                GrantBitSum = 0,
-                GrantOther = "",
-                GrantDepartmentFundingType = 0,
-                GrantDepartmentFundingOther = "",
-                AknBitSum = 0,
-                AknOther = "",
-                AknDepartmentFundingType = 0,
-                AknDepartmentFundingOther = "",
-                //RequestRcvdDate = (DateTime?)null,
-                IsJuniorPI = (bool?)null,
-                HasMentor = (bool?)null,
-                MentorFirstName = "",
-                MentorLastName = "",
-                MentorEmail = "",
-                IsInternal = (bool?)null,
-                IsPilot = (bool?)null,
-                IsGrantProposal = (bool?)null,
-                IsUHGrant = (bool?)null,
-                UHGrantID = 0,
-                GrantProposalFundingAgency = "",
-                IsPaid = (bool?)null,
-                IsRmatrixRequest = (bool?)null,
-                IsRmatrixReport = false,   //(bool?)null,
-                IsReportOlaHawaii = false, //(bool?)null,
-                TypeOfPayment = "",
-                RmatrixNum = (Int32?)null,
-                RmatrixSubDate = (DateTime?)null,
-                IsOlaHawaiiRequest = (bool?)null,
-                OlaHawaiiNum = (Int32?)null,
-                OlaHawaiiSubDate = (DateTime?)null,
-                OlaHawaiiRequestType = 0,
-                ProjectCompletionDate = (DateTime?)null,
-                ProjectStatus = "",
-                Comments = "",
-                IsApproved = false,
-                Creator = User.Identity.Name,
-                CreationDate = DateTime.Now,
-                ProjectType = 1,
-                CreditTo = 1
-            };
-
-            return project;
-        }
-
-        /// <summary>
-        /// Pulls or current project or generates new project based on what is in the database.
-        /// </summary>
-        /// <returns>Project referred to.</returns>
-        private Project2 GetProject()
-        {
-            int id = 0,
-                piId = 0,
-                leadBiostatId = 0,
-                //otherMemberBitSum = 0,
-                studyAreaBitSum = 0,
-                healthDataBitSum = 0,
-                studyTypeBitSum = 0,
-                studyPopulationBitSum = 0,
-                serviceBitSum = 0,
-                grantBitSum = 0,
-                grantDepartmentFundingType = 0,
-                aknBitSum = 0,
-                aknDepartmentFundingType = 0,
-                rmatrixNum = 0,
-                olaHawaiiNum = 0,
-                uhGrantId = 0,
-                olaRequestTypeYear = 0;
-
-            long otherMemberBitSum = 0;
-
-            DateTime dtInitialDate, dtDeadline, dtRmatrixSubDate, dtOlaHawaiiSubDate, dtCompletionDate;
-
-            Project2 project = new Project2()
-            {
-                Id = Int32.TryParse(ddlProject.SelectedValue, out id) ? id : 0,   // required 
-                PIId = Int32.TryParse(ddlPI.SelectedValue, out piId) ? piId : -1, // required
-                Title = txtTitle.Value, // required
-                Summary = txtSummary.Value,
-                InitialDate = DateTime.TryParse(txtInitialDate.Text, out dtInitialDate) ? dtInitialDate : DateTime.Now,
-                DeadLine = DateTime.TryParse(txtDeadline.Text, out dtDeadline) ? dtDeadline : (DateTime?)null,
-                LeadBiostatId = Int32.TryParse(ddlLeadBiostat.SelectedValue, out leadBiostatId) ? leadBiostatId : -1, // required
-                //OtherMemberBitSum = Int32.TryParse(txtOtherMemberBitSum.Value, out otherMemberBitSum) ? otherMemberBitSum : 0, // required
-                OtherMemberBitSum = Int64.TryParse(txtOtherMemberBitSum.Value, out otherMemberBitSum) ? otherMemberBitSum : 0, // required
-                StudyAreaBitSum = Int32.TryParse(txtStudyAreaBitSum.Value, out studyAreaBitSum) ? studyAreaBitSum : 0, // required
-                StudyAreaOther = txtStudyAreaOther.Value,
-                HealthDateBitSum = Int32.TryParse(txtHealthDataBitSum.Value, out healthDataBitSum) ? healthDataBitSum : 0, // required
-                HealthDataOther = txtHealthDataOther.Value,
-                StudyTypeBitSum = Int32.TryParse(txtStudyTypeBitSum.Value, out studyTypeBitSum) ? studyTypeBitSum : 0, // required
-                StudyTypeOther = txtStudyTypeOther.Value,
-                StudyPopulationBitSum = Int32.TryParse(txtStudyPopulationBitSum.Value, out studyPopulationBitSum) ? studyPopulationBitSum : 0, // required
-                StudyPopulationOther = txtStudyPopulationOther.Value,
-                IsHealthDisparity = chkHealthDisparityYes.Checked ? (byte)HealthDisparityType.Yes : chkHealthDisparityNo.Checked ? (byte)HealthDisparityType.No : chkHealthDisparityNA.Checked ? (byte)HealthDisparityType.NA : (byte)0,
-                ServiceBitSum = Int32.TryParse(txtServiceBitSum.Value, out serviceBitSum) ? serviceBitSum : 0, // required
-                ServiceOther = txtServiceOther.Value,
-                //IsLetterOfSupport = chkLetterOfSupportYes.Checked ? (byte)HealthDisparityType.Yes : chkLetterOfSupportNo.Checked ? (byte)HealthDisparityType.No : (byte)0,
-                IsLosCollaborative = chkLOS_Collaborative.Checked ? (byte)HealthDisparityType.Yes : chkLOS_Noncollaborative.Checked ? (byte)HealthDisparityType.No : chkLOS_NA.Checked ? (byte)HealthDisparityType.NA : (byte)0,
-                IsMOU = chkDeptFundMouYes.Checked ? (byte)HealthDisparityType.Yes : chkDeptFundMouNo.Checked ? (byte)HealthDisparityType.No : (byte)0,
-                GrantBitSum = Int32.TryParse(txtGrantBitSum.Value, out grantBitSum) ? grantBitSum : 0,
-                GrantOther = txtGrantOther.Value,
-                GrantDepartmentFundingType = Int32.TryParse(ddlDepartmentFunding.SelectedValue, out grantDepartmentFundingType) ? grantDepartmentFundingType : 0,
-                GrantDepartmentFundingOther = txtDeptFundOth.Value,
-                AknBitSum = int.TryParse(txtAknBitSum.Value, out aknBitSum) ? aknBitSum : 0,
-                AknOther = txtAknOther.Value,
-                AknDepartmentFundingType = Int32.TryParse(ddlAknDepartmentFunding.SelectedValue, out aknDepartmentFundingType) ? aknDepartmentFundingType : 0,
-                AknDepartmentFundingOther = txtAknDeptFundOth.Value,
-                //RequestRcvdDate = DateTime.TryParse(txtRequestRcvdDate.Text, out dtRequestRcvdDate) ? dtRequestRcvdDate : (DateTime?)null,
-                IsJuniorPI = chkJuniorPIYes.Checked, //(bool?)null,
-                HasMentor = chkMentorYes.Checked,
-                MentorFirstName = txtMentorFirstName.Value,
-                MentorLastName = txtMentorLastName.Value,
-                MentorEmail = txtMentorEmail.Value,
-                IsInternal = chkInternalYes.Checked,
-                IsPilot = chkPilotYes.Checked,
-                IsGrantProposal = chkProposalYes.Checked,
-                IsUHGrant = chkIsUHPilotGrantYes.Checked,
-                UHGrantID = Int32.TryParse(ddlUHGrant.SelectedValue, out uhGrantId) ? uhGrantId : default(int?),
-                GrantProposalFundingAgency = txtGrantProposalFundingAgency.Value,
-                IsPaid = chkPayingYes.Checked,
-                IsRmatrixRequest = chkIsRmatrix.Checked,
-                IsRmatrixReport = Int32.TryParse(ddlProject.SelectedValue, out id) ? (chkReportToRmatrix.Checked ? false : true) : false,
-                IsReportOlaHawaii = Int32.TryParse(ddlProject.SelectedValue, out id) ? chkReportToOlaHawaii.Checked ? false : true : false,
-                TypeOfPayment = txtPayProject.Value,
-                RmatrixNum = Int32.TryParse(txtRmatrixNum.Value, out rmatrixNum) ? rmatrixNum : (Int32?)null,
-                RmatrixSubDate = DateTime.TryParse(txtRmatrixSubDate.Text, out dtRmatrixSubDate) ? dtRmatrixSubDate : (DateTime?)null,
-                IsOlaHawaiiRequest = chkIsOlaHawaii.Checked,
-                OlaHawaiiNum = Int32.TryParse(txtOlaHawaiiNum.Value, out olaHawaiiNum) ? olaHawaiiNum : (Int32?)null,
-                OlaHawaiiSubDate = DateTime.TryParse(txtOlaHawaiiSubDate.Text, out dtOlaHawaiiSubDate) ? dtOlaHawaiiSubDate : (DateTime?)null,
-                //   OlaHawaiiRequestType = chkRequestTypeRfunded.Checked ? (byte)OlaHawaiiRequestType.Rfunded : chkRequestTypePilotPI.Checked ? (byte)OlaHawaiiRequestType.PilotPI : chkRequestTypeOther.Checked ? (byte)OlaHawaiiRequestType.Other : (byte)0,
-                OlaHIRequestType = chkRequestTypeFunded.Checked ? (byte)OlaHIRequestType.Funded : chkRequestTypeApplication.Checked ? (byte)OlaHIRequestType.Application : (byte)0,
-                OlaHIProjectType = chkRequestTypeOlaPilot.Checked ? (byte)OlaHIRequestType.OlaHIPilot : chkRequestTypeOlaR21.Checked ? (byte)OlaHIRequestType.OlaHIR21 : chkRequestTypeOlaR01.Checked ? (byte)OlaHIRequestType.OlaHIR01 : chkRequestTypeOlaOther.Checked ? (byte)OlaHIRequestType.OlaHIOther : (byte)0,
-                OlaHIRequestYear = Int32.TryParse(txtRequestTypeYear.Value, out olaRequestTypeYear) ? olaRequestTypeYear : (Int32?)null,
-                ProjectCompletionDate = DateTime.TryParse(txtCompletionDate.Text, out dtCompletionDate) ? dtCompletionDate : (DateTime?)null,
-                ProjectStatus = txtProjectStatus.Value,
-                Comments = txtComments.Value,
-                IsApproved = chkApproved.Checked,
-                Creator = User.Identity.Name,
-                CreationDate = DateTime.Now,
-                ProjectType = chkBiostat.Checked ? (byte)ProjectType.Biostat : chkBioinfo.Checked ? (byte)ProjectType.Bioinfo : (byte)0, // if biostat is checked, then biostat, otherwise bioinfo (or 0 if unchecked).
-                CreditTo = chkCreditToBiostat.Checked ? (byte)ProjectType.Biostat : chkCreditToBioinfo.Checked ? (byte)ProjectType.Bioinfo : chkCreditToBoth.Checked ? (byte)ProjectType.Both : (byte)0 // if biostat is checked, then biostat; otherwise if bioinfo is checked, then bioinfo; otherwise if 'both', then both, otherwise nothing is checked (value of 0)
-            };
-
-            return project;
-        }
-
-        /// <summary>
-        /// Obtains the phase information from the database onto the Project Form.
-        /// </summary>
-        /// <param name="projectId">Referred project ID.</param>
-        /// <returns>List of project phases for the referred-to project.</returns>
-        private List<ProjectPhase> GetPhase(int projectId)
-        {
-            List<ProjectPhase> phases = new List<ProjectPhase>();
-
-            foreach (GridViewRow row in gvPhase.Rows)
-            {
-                if (row.RowType == DataControlRowType.DataRow)
-                {
-                    Label lblId = row.FindControl("lblId") as Label;
-                    Label lblPhase = row.FindControl("lblPhase") as Label;
-                    TextBox txtTitle = row.FindControl("txtTitle") as TextBox;
-                    TextBox txtMsHrs = row.FindControl("txtMsHrs") as TextBox;
-                    TextBox txtPhdHrs = row.FindControl("txtPhdHrs") as TextBox;
-                    TextBox txtStartDate = row.FindControl("txtStartDate") as TextBox;
-                    TextBox txtCompletionDate = row.FindControl("txtCompletionDate") as TextBox;
-
-                    int output = 0;
-                    decimal dMsOutput = 0.0m, dPhdOutput = 0.0m;
-                    DateTime dtStart, dtEnd;
-
-                    if (lblPhase != null)
-                    {
-                        ProjectPhase pPhase = new ProjectPhase()
-                        {
-                            Id = int.TryParse(lblId.Text, out output) ? output : -1,
-                            ProjectId = projectId,
-                            Name = lblPhase.Text,
-                            Title = txtTitle.Text,
-                            MsHrs = decimal.TryParse(txtMsHrs.Text, out dMsOutput) ? dMsOutput : default(decimal?),
-                            PhdHrs = decimal.TryParse(txtPhdHrs.Text, out dPhdOutput) ? dPhdOutput : default(decimal?),
-                            StartDate = DateTime.TryParse(txtStartDate.Text, out dtStart) ? dtStart : (DateTime?)null,
-                            CompletionDate = DateTime.TryParse(txtCompletionDate.Text, out dtEnd) ? dtEnd : (DateTime?)null,
-                            Creator = Page.User.Identity.Name,
-                            CreateDate = DateTime.Now
-                        };
-
-                        phases.Add(pPhase);
-                    }
-                }
-            }
-
-            return phases;
-        }
-
-        /// <summary>
-        /// Prepares the survey form for the client corresponding to the current project.
-        /// Opens a pop-up (divProjectInfo) that will be shown before sending the actual survey.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void btnSurvey_Click(object sender, EventArgs e)
-        {
-            int projectId = 0;
-            Int32.TryParse(ddlProject.SelectedValue, out projectId);
-
-            DateTime projectCompletionDate;
-            /// If project exists and a project completion date exists, 
-            /// the survey is being retrieved for that specific project.
-            if (projectId > 0 && DateTime.TryParse(txtCompletionDate.Text, out projectCompletionDate))
-            {
-                SurveyForm sf = GetSurvey(projectId);
-
-                int requestCount = sf.RequestCount;
-                if (sf.Project2 != null /*&& requestCount > 1*/)
-                {
-                    /// Redirects to current survey if already completed.
-                    if (sf.Responded)
-                    {
-                        Response.Redirect("~/Guest/PISurveyForm?Id=" + sf.Id);
-                    }
-                    /// Sends an error message if the survey has been sent twice before.
-                    else if (requestCount > 1)
-                    {
-                        lblSurveyMsg.Text = "<strong><h3>Survey has been sent to PI twice already.</h3></strong>";
-                        divProjectInfo.Visible = false;
-                        btnSendSurvey.Visible = false;
-                    }
-                    else
-                    {
-                        /// Adds survey count if PI has *not* responded 
-                        ///                      AND request count less than 2. 
-                        //UpdateSurvey(sf.Id);
-                    }
-                    /// Sends an error message if there is no time entry hours for the project.
-                }
-                else if (string.IsNullOrEmpty(sf.LeadBiostat))
-                {
-                    lblSurveyMsg.Text = "<strong><h3>There have been <u>no</u> hours entered for this *closed* project.</h3><br />Please check the time entry hours for this project and try again.</strong>";
-                    divProjectInfo.Visible = false;
-                    btnSendSurvey.Visible = false;
-                }
-                /// If survey is ready to be sent (project is closed AND time entry hours have been entered),
-                /// project title, biostats, and project period information is made available to the sender
-                /// before he/she has a chance to send the survey to the client.
-                else
-                {
-                    string PIName = ddlPI.SelectedItem.Text;
-                    lblSurveyMsg.Text = String.Format("Survey invitation will be sent to PI, <strong>{0}</strong> <u>({1})</u>."
-                         , PIName, sf.SendTo);
-
-                    lblProjectTitle.Text = txtTitle.Value;
-                    lblBiostats.Text = sf.LeadBiostat;
-                    lblProjectPeriod.Text = ((DateTime)sf.ProjectInitialDate).ToShortDateString() + " - " + ((DateTime)sf.ProjectCompletionDate).ToShortDateString();
-                    //lblServiceHours.Text = sf.PhdHours + " PhD hours; " + sf.MsHours + " MS hours";
-
-                    divProjectInfo.Visible = true;
-                    btnSendSurvey.Visible = true;
-                }
-            }
-            /// Sends an error message if the project is not closed, 
-            /// i.e., there is no project completion date saved.
-            else
-            {
-                lblSurveyMsg.Text = "<strong><h3>The project has not yet been closed. Please check if project has been completed.</h3></strong>";
-                divProjectInfo.Visible = false;
-                btnSendSurvey.Visible = false;
-            }
-
-            StringBuilder sb = new StringBuilder();
-
-            sb.Append(@"<script type='text/javascript'>");
-                            sb.Append("$('#surveyModal').modal('show');");
-                            sb.Append(@"</script>");
-            ScriptManager.RegisterClientScriptBlock(this, this.GetType(),
-                       "ShowModalScript", sb.ToString(), false);
-
-            //Response.Redirect("Guest/PISurveyForm");
-        }
-
-        /// <summary>
-        /// Final button that needs to be pressed in order to send out the client survey.
-        /// Sends the survey email with the link to the survey form before sending a final
-        /// confirmation message that the survey email has been sent.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void btnSendSurvey_Click(object sender, EventArgs e)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.Append(@"<script type='text/javascript'>");
-
-                            int projectId = 0;
-                            Int32.TryParse(ddlProject.SelectedValue, out projectId);
-
-                            if (projectId > 0) {
-                                //create a survey, return a survey form id
-                                //string surveyFormId = LoadSurvey(projectId);
-
-                                SurveyForm surveyForm = GetSurvey(projectId);
-
-                                if (surveyForm != null) {
-                                    using(ProjectTrackerContainer db = new ProjectTrackerContainer())
-                                    {
-                                        var sur = db.SurveyForms.FirstOrDefault(s => s.ProjectId == surveyForm.ProjectId);
-                                        if (sur == null) {
-                                            db.SurveyForms.Add(surveyForm);
-                                            db.SaveChanges();
                                         }
-                                    }
+                                        // update bitsum for calculation
+                                        if (_aknCheckBox.is(':checked'))
+                                            _aknBitSum += parseInt(_aknBitValue, 10);
 
-                                    SendSurveyEmail(surveyForm);
+                                        if (_aknName == 'N/A' && _aknCheckBox.is(':checked')) {
+                                            ToggleTable(_tableAkn, true);
+                                        }
+                                        else if (_aknBitSum == 0) {
+                                            ToggleTable(_tableAkn, false);
+                                        }
 
-                                    /// Adds survey count
-                                    UpdateSurvey(surveyForm.Id);
-
-                                    sb.Append("alert('Survey is sent.');");
-                                    sb.Append("$('#surveyModal').modal('hide');");
-
-                                    //if (!String.IsNullOrEmpty(surveyForm.Id))
-                                    //{
-                                    //    Response.Redirect("~/Guest/PISurvey?SurveyId=" + surveyForm.Id);
-                                    //}
+                                    });
                                 }
+                            });
 
-                            }
 
-                            sb.Append(@"</script>");
-            ScriptManager.RegisterClientScriptBlock(this, this.GetType(), "HideModalScript", sb.ToString(), false);
-        }
-
-        /// <summary>
-        /// Based on project that corresponds to the survey, prepares the survey form that is 
-        /// to be distributed to clients after project completion.
-        /// </summary>
-        /// <param name="projectId">Project being referred to.</param>
-        /// <returns>Prepared survey form, or exisiting filled-out survey form.</returns>
-        private SurveyForm GetSurvey(int projectId)
-        {
-            SurveyForm surveyForm = null;
-            //string surveyId = string.Empty;
-
-            using (ProjectTrackerContainer db = new ProjectTrackerContainer())
-            {
-                var project = db.Project2.FirstOrDefault(p => p.Id == projectId);
-
-                if (project != null)
-                {
-                    surveyForm = db.SurveyForms.FirstOrDefault(s => s.ProjectId == projectId);
-
-                    if (surveyForm == null)
-                    {
-                        decimal p = 0.0M, m = 0.0M;
-
-                        //ObjectParameter phdHours = new ObjectParameter("PhdHours", typeof(decimal));
-                        //ObjectParameter msHours = new ObjectParameter("MSHours", typeof(decimal));
-                        //var i = db.P_PROJECT_HOURS(project.InitialDate, project.ProjectCompletionDate, projectId, phdHours, msHours);
-                        //db.SaveChanges();
-
-                        //Decimal.TryParse(phdHours.Value.ToString(), out p);
-                        //Decimal.TryParse(msHours.Value.ToString(), out m);
-
-                        //var biostats = project.ProjectBioStats.Where(b => b.EndDate > DateTime.Now).ToList();
-                        var biostats = db.BioStats
-                                        .Join(db.TimeEntries
-                                            , b => b.Id
-                                            , t => t.BioStatId
-                                            , (b, t) => new { b.Name, t })
-                                        .Join(db.Date1
-                                            , tt => tt.t.DateKey
-                                            , d => d.DateKey
-                                            , (tt, d) => new { tt.Name, tt.t.ProjectId, d.Date }
-                                        )
-                                        .Where(a => a.ProjectId == projectId && a.Date >= project.InitialDate && a.Date <= project.ProjectCompletionDate)
-                                        .Select(a => a.Name).Distinct();
-
-                        if (biostats != null)
-                        {
-                            StringBuilder sb = new StringBuilder();
-                            foreach (var biostat in biostats)
-                            {
-                                sb.Append(biostat);
-                                sb.Append("; ");
-                            }
-
-                            SurveyForm sf = new SurveyForm()
-                            {
-                                Id = System.Guid.NewGuid().ToString(),
-                                SurveyId = 1,
-                                ProjectId = projectId,
-                                RequestBy = User.Identity.Name,
-                                RequestDate = DateTime.Now,
-                                PhdHours = p,
-                                MsHours = m,
-                                ProjectInitialDate = project.InitialDate,
-                                ProjectCompletionDate = project.ProjectCompletionDate,
-                                LeadBiostat = string.IsNullOrEmpty(sb.ToString()) ? sb.ToString() : sb.ToString().Substring(0, sb.Length - 2),
-                                ProjectTitle = project.Title,
-                                SendTo = project.Invests.Email,
-                                Comment = string.Empty,
-                                RequestCount = 0
-                            };
-
-                            surveyForm = sf;
+                            // for each checkbox, if _checkbox is checked and if tblGrant.Name = tblAkn.name
                         }
 
+                        if (_name == 'Department Funding' && _id == 'tblGrant') {
+
+
+                            if (_checkBox.is(':checked')) {
+                                //ddldropdown show
+                                $('#MainContent_ddlDepartmentFunding').show();
+                                $('#MainContent_ddlDepartmentFunding').parent().find('label').show();
+
+
+                                $('#MainContent_ddlDepartmentFunding').change(function () {
+                                    //var selectedVal = this.value;
+                                    var selectedText = $("option:selected", this).text();
+
+                                    if (selectedText == "Other"/*selectedVal == 96*/ /*(Other)*/) {
+                                        $('#MainContent_txtDeptFundOth').show();
+                                        $('#MainContent_txtDeptFundOth').parent().find('label').show();
+
+                                        $('#MainContent_chkDeptFundMouYes').prop('checked', false);
+                                        $('#MainContent_chkDeptFundMouNo').prop('checked', false);
+                                        $('#divDeptFundMou').hide();
+                                    }
+                                    else if (selectedText == "School of Nursing & Dental Hygiene"/*selectedVal == 62*/ /*(School of Nursing & Dental Hygiene)*/) {
+                                        $('#divDeptFundMou').show();
+
+                                        $('#MainContent_txtDeptFundOth').val('');
+                                        $('#MainContent_txtDeptFundOth').hide();
+                                        $('#MainContent_txtDeptFundOth').parent().find('label').hide();
+                                    }
+                                    else {
+                                        $('#MainContent_txtDeptFundOth').val('');
+                                        $('#MainContent_txtDeptFundOth').hide();
+                                        $('#MainContent_txtDeptFundOth').parent().find('label').hide();
+
+                                        $('#MainContent_chkDeptFundMouYes').prop('checked', false);
+                                        $('#MainContent_chkDeptFundMouNo').prop('checked', false);
+                                        $('#divDeptFundMou').hide();
+                                    }
+                                });
+
+                                if ($("option:selected", $('#MainContent_ddlDepartmentFunding')).text() == "Other"/*$('#MainContent_ddlDepartmentFunding').val() == 96*/ /*(Other)*/) {
+                                    $('#MainContent_txtDeptFundOth').show();
+                                    $('#MainContent_txtDeptFundOth').parent().find('label').show();
+                                }
+                                else if ($("option:selected", $('#MainContent_ddlDepartmentFunding')).text() == "School of Nursing & Dental Hygiene"/*$('#MainContent_ddlDepartmentFunding').val() == 62*/ /*(School of Nursing & Dental Hygiene)*/) {
+                                    $('#divDeptFundMou').show();
+
+                                    $('#MainContent_txtDeptFundOth').val('');
+                                    $('#MainContent_txtDeptFundOth').hide();
+                                    $('#MainContent_txtDeptFundOth').parent().find('label').hide();
+
+                                }
+                                else {
+                                    $('#MainContent_txtDeptFundOth').val('');
+                                    $('#MainContent_txtDeptFundOth').hide();
+                                    $('#MainContent_txtDeptFundOth').parent().find('label').hide();
+
+                                    $('#MainContent_chkDeptFundMouYes').prop('checked', false);
+                                    $('#MainContent_chkDeptFundMouNo').prop('checked', false);
+                                    $('#divDeptFundMou').hide();
+                                }
+
+
+                            }
+                            else {
+                                //ddldropdown hide
+                                $('#MainContent_ddlDepartmentFunding').val('');
+                                $('#MainContent_ddlDepartmentFunding').hide();
+                                $('#MainContent_ddlDepartmentFunding').parent().find('label').hide();
+
+                                $('#MainContent_txtDeptFundOth').val('');
+                                $('#MainContent_txtDeptFundOth').hide();
+                                $('#MainContent_txtDeptFundOth').parent().find('label').hide();
+
+                                $('#MainContent_chkDeptFundMouYes').prop('checked', false);
+                                $('#MainContent_chkDeptFundMouNo').prop('checked', false);
+                                $('#divDeptFundMou').hide();
+                            }
+
+                        }
+
+                        if (_name == 'Department Funding' && _id == 'tblAkn') {
+
+
+                            if (_checkBox.is(':checked')) {
+                                //ddldropdown show
+                                $('#MainContent_ddlAknDepartmentFunding').show();
+                                $('#MainContent_ddlAknDepartmentFunding').parent().find('label').show();
+
+
+                                $('#MainContent_ddlAknDepartmentFunding').change(function () {
+                                    //var selectedVal = this.value;
+                                    var selectedText = $("option:selected", this).text();
+
+                                    if (selectedText == "Other"/*selectedVal == 96*/) {
+                                        $('#MainContent_txtAknDeptFundOth').show();
+                                        $('#MainContent_txtAknDeptFundOth').parent().find('label').show();
+                                    }
+                                    else {
+                                        $('#MainContent_txtAknDeptFundOth').val('');
+                                        $('#MainContent_txtAknDeptFundOth').hide();
+                                        $('#MainContent_txtAknDeptFundOth').parent().find('label').hide();
+                                    }
+                                });
+
+                                if ($("option:selected", $('#MainContent_ddlAknDepartmentFunding')).text() == "Other"/*$('#MainContent_ddlAknDepartmentFunding').val() == 96*/) {
+                                    $('#MainContent_txtAknDeptFundOth').show();
+                                    $('#MainContent_txtAknDeptFundOth').parent().find('label').show();
+                                } else {
+                                    $('#MainContent_txtAknDeptFundOth').val('');
+                                    $('#MainContent_txtAknDeptFundOth').hide();
+                                    $('#MainContent_txtAknDeptFundOth').parent().find('label').hide();
+                                }
+
+
+                            }
+                            else {
+                                //ddldropdown hide
+                                $('#MainContent_ddlAknDepartmentFunding').val('');
+                                $('#MainContent_ddlAknDepartmentFunding').hide();
+                                $('#MainContent_ddlAknDepartmentFunding').parent().find('label').hide();
+
+                                $('#MainContent_txtAknDeptFundOth').val('');
+                                $('#MainContent_txtAknDeptFundOth').hide();
+                                $('#MainContent_txtAknDeptFundOth').parent().find('label').hide();
+                            }
+
+                        }
+
+
+                        if (_checkBox.is(':checked'))
+                            _bitSum += parseInt(_bitValue, 10);
+
+                        if (_name == 'N/A' && _checkBox.is(':checked')) {
+                            ToggleTable(_table, true);
+                        }
+                        else if (_bitSum == 0) {
+                            ToggleTable(_table, false);
+                        }
+                    });
+
+                    $(_textBitSum).val(_bitSum);
+
+
+                }
+            }
+        }
+        // Disables all checkboxes if checkbox choice "N/A" is selected.
+        function ToggleTable(tbl, isNA) {
+            tbl.find('td').each(function () {
+                var _checkBox = $(this).find(":input[name$='chkId']"),
+                    _bitValue = $(this).find(":input[name$='BitValue']").val(),
+                    _name = $(this).eq(0).text().trim();
+
+                if (isNA) {
+                    if (_name != 'N/A') {
+                        _checkBox.prop("checked", false);
+                        _checkBox.prop("disabled", true);
                     }
                 }
-            }
-
-            return surveyForm;
+                else {
+                    _checkBox.prop("disabled", false);
+                }
+            });
         }
 
-        /// <summary>
-        /// Add a request count to the instance of the survey (*not* the answers, but survey record). 
-        /// </summary>
-        /// <param name="surveyId">Specified Survey ID.</param>
-        private void UpdateSurvey(string surveyId)
-        {
-            using (ProjectTrackerContainer db = new ProjectTrackerContainer())
-            {
-                var survey = db.SurveyForms.FirstOrDefault(s => s.Id == surveyId);
+        // DatePicker - initializes date for date fields.
+        biostatNS.DatePicker = function (ctrlId) {
+            var ctl = ctrlId;
 
-                if (survey != null)
-                {
-                    survey.RequestCount += 1;
-                    db.SaveChanges();
+            return {
+                init: function (e) {
+                    $('#' + ctl).datepicker({
+                        todayHighlight: true,
+                        format: "mm/dd/yyyy",
+                        autoclose: true,
+                        orientation: "top"
+                    })
+                }
+                , onchange: function (e) {
+                    $('#' + ctl).on('changeDate', function (e) {
+                        //revalidate
+                        if ($('#' + ctl).validate()) {
+                            $('#' + ctl).closest('.row').removeClass('has-error');
+                        }
+                    });
                 }
             }
         }
 
-        /// <summary>
-        /// Adds grant/funding information to specified Project Form
-        /// and pre-populates grant form with exisiting information from 
-        /// the project form.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void btnAddGrant_Click(object sender, EventArgs e)
-        {
-            int projectId = 0;
-            Int32.TryParse(ddlProject.SelectedValue, out projectId);
+        // -- Initializes view of projects -- \\
+        function bindProjects() {
 
-            if (projectId > 0)
-            {
-                Response.Redirect("~/Tracking/GrantForm?ProjectId=" + projectId);
-            }
-        }
+            // (Solves issue of binding projects not working in Firefox and Microsoft Edge)
+            if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1 || navigator.userAgent.toLowerCase().indexOf('microsoft edge')) { window.event = {}; }
 
-        //protected void btnRest_Click(object sender, EventArgs e)
-        //{
-        //    Project2 initProject = InitProject(-1);
-        //    SetProject(initProject);
+            //var piId = $("#MainContent_ddlPI").val();
 
-        //    BindPhaseByProject(0);
-        //}        
-
-        /// <summary>
-        /// Checks whether or not the bit value exists in the current bit sum calculation.
-        /// </summary>
-        /// <param name="bitSum">Total bit sum (e.g., [1026](fake) = Ved[2] & Chelu[1024])</param>
-        /// <param name="hdnBitValue">Bit Value of current selection (e.g., 1024 = Chelu</param>
-        /// <returns>Returns 1 if the bit value is in the bitsum, 0 if not.</returns>
-        private bool CheckBitValue(int bitSum, HiddenField hdnBitValue)
-        {
-            int bitValue = 0;
-            Int32.TryParse(hdnBitValue.Value, out bitValue);
-
-            int c = bitSum & bitValue;
-
-            return c == bitValue;
-        }
-
-        /// <summary>
-        /// Checks whether or not the bit value exists in the current bit sum calculation.
-        /// 
-        /// Same functionality as CheckBitValue() but accepts type "long" in lieu of "int".
-        /// </summary>
-        /// <param name="bitSum">Total bit sum (e.g., [1026](fake) = Ved[2] & Chelu[1024])</param>
-        /// <param name="hdnBitValue">Bit Value of current selection (e.g., 1024 = Chelu</param>
-        /// <returns>Returns 1 if the bit value is in the bitsum, 0 if not.</returns>
-        private bool CheckBitValue2(long bitSum, HiddenField hdnBitValue)
-        {
-            long bitValue = 0;
-            Int64.TryParse(hdnBitValue.Value, out bitValue);
-
-            long c = bitSum & bitValue;
-
-            return c == bitValue;
-        }
-
-        /// <summary>
-        /// Obtains grant data table information from the database.
-        /// </summary>
-        private void BindGridViewGrant()
-        {
-            GridViewGrant.DataSource = GetGrantTable();
-            GridViewGrant.DataBind();
-        }
+            // --> First + Last Name of PI.
+            var filterPI = $("#MainContent_ddlPI :selected").text();
 
 
-        /// <summary>
-        /// Obtains grant table based on what has been specified from the
-        /// dropdown selections.
-        /// </summary>
-        /// <returns></returns>
-        private DataTable GetGrantTable()
-        {
+            //var currentProjectId = $("#MainContent_ddlProjectHdn").val();
 
-            DataTable dt = new DataTable("grantTable");
+            // --> Prepopulates PI link with PI name (from dropdown).
+            $('#MainContent_lblPI').text(filterPI);
 
-            dt.Columns.Add("Id", System.Type.GetType("System.Int32"));
-            dt.Columns.Add("PI", System.Type.GetType("System.String"));
-            dt.Columns.Add("GrantTitle", System.Type.GetType("System.String"));
-            dt.Columns.Add("GrantStatus", System.Type.GetType("System.String"));
-            dt.Columns.Add("GrantSubmitDate", System.Type.GetType("System.String"));
-
-            using (ProjectTrackerContainer db = new ProjectTrackerContainer())
-            {
-                int projectId = 0;
-                
-                Int32.TryParse(ddlProject.SelectedItem.Value, out projectId);
-
-                var query = db.ViewGrant2.Where(g => g.ProjectId == projectId);
-
-                foreach(var p in query.OrderByDescending(p => p.Id).ToList())
-                {
-                    DataRow row = dt.NewRow();
-
-                    row["Id"] = p.Id;
-                    row["PI"] = p.PI;
-                    row["GrantTitle"] = p.GrantTitle;
-                    row["GrantStatus"] = p.GrantStatus;
-                    row["GrantSubmitDate"] = p.GrantSubmitDate;
-
-                    dt.Rows.Add(row);
-
+            // --> Preopulates hidden Project dropdown with value from ddlProject dropdown.
+            $("#MainContent_ddlProjectHdn > option").not(":first").each(function () {
+                if (this.text.indexOf(filterPI) > 0 || filterPI.length == 0 || filterPI.indexOf('Search') >= 0) {
+                    $("#MainContent_ddlProjectHdn").children("option[value=" + this.value + "]").show();
+                    $("#MainContent_ddlProject").children("option[value=" + this.value + "]").show();
+                }
+                else {
+                    $("#MainContent_ddlProjectHdn").children("option[value=" + this.value + "]").hide();
+                    $("#MainContent_ddlProject").children("option[value=" + this.value + "]").hide();
                 }
 
+                //if (this.value == currentProjectId) {
+                //    $("#MainContent_ddlProject").val(this.value);
+                //}
+            });
+
+            // Creates a fresh new form (initializes form) if there is no PI specified.
+            if (filterPI.length == 0 || filterPI.indexOf('Search') >= 0) {
+                $('#MainContent_lblProjectId').text('');
+                $('#MainContent_txtTitle').val('');
+                $('#MainContent_txtSummary').val('');
+                $('#MainContent_txtInitialDate').val('');
+                $('#MainContent_txtDeadline').val('');
+                $('#MainContent_ddlLeadBiostat').val('');
+
+                $('#tblBiostat').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+
+                $('#tblStudyArea').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+                $('#MainContent_txtStudyAreaOther').val('');
+                $('#MainContent_txtStudyAreaOther').hide();
+
+                $('#tblHealthData').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+                $('#MainContent_txtHealthDataOther').val('');
+                $('#MainContent_txtHealthDataOther').hide();
+
+                $('#tblStudyType').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+                $('#MainContent_txtStudyTypeOther').val('');
+                $('#MainContent_txtStudyTypeOther').hide();
+
+                $('#tblStudyPopulation').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+                $('#MainContent_txtStudyPopulationOther').val('');
+                $('#MainContent_txtStudyPopulationOther').hide();
+
+                $('#tblService').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+                $('#MainContent_txtServiceOther').val('');
+                $('#MainContent_txtServiceOther').hide();
+
+                $('#tblGrant').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+                $('#MainContent_txtGrantOther').val('');
+                $('#MainContent_txtGrantOther').hide();
+                $('#MainContent_txtGrantOther').parent().find('label').hide();
+
+                $('#MainContent_ddlDepartmentFunding').val('');
+                $('#MainContent_ddlDepartmentFunding').hide();
+                $('#MainContent_ddlDepartmentFunding').parent().find('label').hide();
+
+                $('#MainContent_txtDeptFundOth').val('');
+                $('#MainContent_txtDeptFundOth').hide();
+                $('#MainContent_txtDeptFundOth').parent().find('label').hide();
+
+                $('#MainContent_chkDeptFundMouYes').prop('checked', false);
+                $('#MainContent_chkDeptFundMouNo').prop('checked', false);
+                $('#divDeptFundMou').hide();
+
+                $('#tblAkn').find('td').each(function () {
+                    $(this).find(":input[name$='chkId']").prop('checked', false);
+                });
+                $('#MainContent_txtAknOther').val('');
+                $('#MainContent_txtAknOther').hide();
+                $('#MainContent_txtAknOther').parent().find('label').hide();
+
+                $('#MainContent_ddlAknDepartmentFunding').val('');
+                $('#MainContent_ddlAknDepartmentFunding').hide();
+                $('#MainContent_ddlAknDepartmentFunding').parent().find('label').hide();
+
+                $('#MainContent_txtAknDeptFundOth').val('');
+                $('#MainContent_txtAknDeptFundOth').hide();
+                $('#MainContent_txtAknDeptFundOth').parent().find('label').hide();
+
+
+                <%= Page.ClientScript.GetPostBackEventReference(upPhase, String.Empty)%>;
+
+                //$('#MainContent_txtRequestRcvdDate').val('');                
+
+                $('#MainContent_chkApproved').prop('checked', false);
+                //$('#MainContent_chkJuniorPIYes').prop('checked', false);
+
+                $('#tblDesc > tbody  > tr').each(function () {
+                    var chkBox = $(this).find('input[type="checkbox"]');
+                    if (chkBox.is(':checked')) {
+                        chkBox.prop('checked', false);
+                    }
+                });
+
+                $('#divHealthDisparity > div').each(function () {
+                    var chkBox = $(this).find('input[type="checkbox"]');
+                    if (chkBox.is(':checked')) {
+                        chkbox.prop('checked', false);
+                    }
+                });
+
+
+                //$('#divLetterOfSupport > div').each(function () {
+                //    var chkBox = $(this).find('input[type="checkbox"]');
+                //    if (chkBox.is(':checked')) {
+                //        chkBox.prop('checked', false);
+                //    }
+                //});
+
+                $('#divCollaborativeLOS > div').each(function () {
+                    var chkBox = $(this).find('input[type="checkbox"]');
+                    if (chkBox.is(':checked')) {
+                        chkBox.prop('checked', false);
+                    }
+                });
+
+
+                //------ liwayway
+
+                $('divhealthDisparity')
+
+                //------
+
+
+
+
+                $('#MainContent_txtMentorFirstName').val('');
+                $('#MainContent_txtMentorLastName').val('');
+                $('#MainContent_txtMentorEmail').val('');
+                $('#divMentor').hide();
+
+                $('#MainContent_chkIsRmatrix').prop('checked', false);
+                //$('#MainContent_chkRmatrixReport').prop('checked', false);
+                $('#MainContent_chkReportToRmatrix').prop('checked', false);
+                $('#MainContent_chkReportToOlaHawaii').prop('checked', false);
+
+                $('#MainContent_txtRmatrixNum').val('');
+                $('#MainContent_txtRmatrixSubDate').val('');
+
+                $('#MainContent_chkIsRmatrix').prop('checked', false);
+                $('#MainContent_chkReportToRmatrix').prop('checked', false);
+
+                $('#MainContent_chkIsOlaHawaii').prop('checked', false);
+
+                $('#MainContent_txtOlaHawaiiNum').val('');
+                $('#MainContent_txtOlaHawaiiSubDate').val('');
+
+                $('#MainContent_txtCompletionDate').val('');
+                $('#MainContent_txtProjectStatus').val('');
+                $('#MainContent_txtComments').val('');
             }
 
+        }
 
-                return dt;
+        // ToggleDiv - shows section if check; otherwise remain hidden.
+        function ToggleDiv(checkBox, theDiv) {
+            if (checkBox.is(":checked"))
+                theDiv.show();
+            else
+                theDiv.hide();
+        }
+
+        // ToggleDiv2 - Same functionality as 'ToggleDiv' with ability to handle two checkboxes.
+        function ToggleDiv2(checkBox1, checkBox2, theDiv) {
+            if (checkBox1.is(":checked")
+                || checkBox2.is(":checked"))
+                theDiv.show();
+            else
+                theDiv.hide();
+        }
+
+        // ToggleDiv4 - Same functionality as 'ToggleDiv' with ability to handle four checkboxes.
+        function ToggleDiv4(checkBox1, checkBox2, checkBox3, checkBox4, theDiv) {
+            if (checkBox1.is(":checked")
+                || checkBox2.is(":checked")
+                || checkBox3.is(":checked")
+                || checkBox4.is(":checked"))
+                theDiv.show();
+            else
+                theDiv.hide();
         }
 
 
-       // private DataTable
-
-
-        /// <summary>
-        /// Redirects to grant page of clicked id.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void GridViewGrant_RowCommand(object sender, GridViewCommandEventArgs e)
-        {
-            if (e.CommandName.Equals("editRecord"))
-            {
-                int grantId = -1;
-                int.TryParse(e.CommandArgument as string, out grantId);
-
-                if (grantId > 0)
-                {
-                    // Go to Grant Page
-                    Response.Redirect(String.Format("~/Tracking/GrantForm?Id={0}", grantId));
-                }
-            }
-        }
-
-        #endregion
-
-        #region email
-        /// <summary>
-        /// Sends notification email to QHS Admin when a user enters
-        /// a new project into the Project Tracking System.
-        /// </summary>
-        /// <param name="projectId">Id of new project that was recently entered.</param>
-        /// <param name="sendToFiscal">Determines whether or not a paying project is sent to fiscal team.</param>
-        private void SendNotificationEmail(int projectId, bool sendToFiscal)
-        {
-            string sendTo = System.Configuration.ConfigurationManager.AppSettings["trackingEmail"];
-
-            /// Sends to fiscal team if a project has been indicated as a paying project.
-            //if (sendToFiscal == true) sendTo = sendTo + ","
-            //        + System.Configuration.ConfigurationManager.AppSettings["superAdminEmail"];
-
-
-            string subject = String.Format("A new project is pending approval, id {0}", projectId);
-
-            string url = HttpContext.Current.Request.Url.AbsoluteUri;
-            if (url.IndexOf("?Id") > 0)
-            {
-                sendTo = sendTo + ";" /*+ System.Configuration.ConfigurationManager.AppSettings["superAdminEmail"]*/;
-                url = url.Substring(0, url.IndexOf("?Id"));
-            }
-
-            StringBuilder body = new StringBuilder();
-            body.AppendFormat("<p>Request GUID {0}<br /><br />", Guid.NewGuid());
-            body.AppendFormat("Please approve new project created by {0} at {1}", User.Identity.Name, url);
-            body.AppendFormat("?Id={0}</p>", projectId);
-            //if (sendToFiscal == true) body.AppendFormat("<br /><strong>QHS Fiscal Team:  This project " +
-            //                                            "has been marked as either a paid project and/or " +
-            //                                            "supported by a grant.  Please verify with admin " +
-            //                                            "before proceeding.  Mahalo!</strong>");
-            body.AppendLine();
-
-            IdentityMessage im = new IdentityMessage()
-            {
-                Subject = subject,
-                Destination = sendTo,
-                Body = body.ToString()
-            };
-
-
-            EmailService emailService = new EmailService();
-
-            emailService.Send(im);
-        }
-
-        /// <summary>
-        /// Sends notification email to QHS Admin when a user closes a project.
-        /// </summary>
-        /// <param name="projectId">Id of new project that was recently entered.</param>
-        /// <param name="closureDate">Date of project closure.</param>
-        private void SendProjectClosureEmail(int projectId, DateTime closureDate)
-        {
-            string sendTo = System.Configuration.ConfigurationManager.AppSettings["trackingEmail"];
-
-            string subject = String.Format("Project # {0} has been closed.", projectId);
-
-            string url = HttpContext.Current.Request.Url.AbsoluteUri;
-            if (url.IndexOf("?Id") > 0)
-            {
-                url = url.Substring(0, url.IndexOf("?Id"));
-            }
-
-            StringBuilder body = new StringBuilder();
-            //body.AppendFormat("<p>Request GUID {0}<br /><br />", Guid.NewGuid());
-            body.AppendFormat("Aloha QHS Tracking Team,<br /><br />");
-            body.AppendFormat("<p>Project # {0} has been closed by {1} at {2}", projectId, User.Identity.Name, url);
-            body.AppendFormat("?Id={0} with a closing date of {1}.</p><br />", projectId, closureDate.ToString("MM/dd/yyyy"));
-            body.AppendFormat("Mahalo!");
-            body.AppendLine();
-
-            IdentityMessage im = new IdentityMessage()
-            {
-                Subject = subject,
-                Destination = sendTo,
-                Body = body.ToString()
-            };
-
-            EmailService emailService = new EmailService();
-
-            emailService.Send(im);
-        }
-
-        /// <summary>
-        /// Sends admin review email to user when a user closes a project.
-        /// </summary>
-        /// <param name="projectId">Id of project reviewed.</param>
-        /// <param name="emailSendTo">Email(s) of Faculty/Staff Member(s) to send admin review email to.</param>
-        /// <param name="userName">Username(s) of Faculty/Staff Member(s) to send admin review email to.</param>
-        /// <param name="investigatorName">Investigator of referred project.</param>
-        /// <param name="reviewedBy">Admin person to review project.</param>
-        private void SendAdminReviewEmail(int projectId, string emailSendTo, string userName, string investigatorName, string reviewedBy)
-        {
-            string sendTo = System.Configuration.ConfigurationManager.AppSettings["trackingEmail"];
-
-            /// Sends to lead biostatistician for confirmation email.
-            sendTo = sendTo + "," + emailSendTo;
-
-            string subject = String.Format("Your project (# {0}) has been reviewed by admin", projectId);
-
-            string url = HttpContext.Current.Request.Url.AbsoluteUri;// + "?Id="+projectId; // (Reverted 2019MAR06 change.)
-            //if (url.IndexOf("?Id") > 0)
-            //{
-            //    sendTo = sendTo + ";" + System.Configuration.ConfigurationManager.AppSettings["superAdminEmail"];
-            //    url = url.Substring(0, url.IndexOf("?Id"));
+        function ClientSideClick(myButton) {
+            // Client side validation
+            //if (typeof (Page_ClientValidate) == 'function') {
+            //    if (Page_ClientValidate() == false)
+            //    { return false; }
             //}
 
-            StringBuilder body = new StringBuilder();
-
-            body.AppendFormat("Aloha {0},<br />", userName);
-            body.AppendFormat("<p>Your <a href='{0}' title='Project ID # {1}'>project # {1}</a> with {2} " +
-                              "has been reviewed by {3} of the QHS Tracking Team.  ", url, projectId, investigatorName, reviewedBy);
-            body.AppendFormat("You may now start entering your hours for this project.  ");
-            body.AppendFormat("Please let us know if you have any questions.</p>");
-            body.AppendFormat("Mahalo,<br />QHS Tracking Team");
-
-            body.AppendLine();
-
-            IdentityMessage im = new IdentityMessage()
-            {
-                Subject = subject,
-                Destination = sendTo,
-                Body = body.ToString()
-            };
-
-
-            EmailService emailService = new EmailService();
-
-            emailService.Send(im);
-        }
-
-        /// <summary>
-        /// When "Send Survey to Client" button has been clicked, an email will notify
-        /// clients (Principal Investigator) of the project to ask for a client survey
-        /// to review the services that were provided.
-        /// </summary>
-        /// <param name="surveyForm">Survey form that user will need to fill out.</param>
-        private void SendSurveyEmail(SurveyForm surveyForm)
-        {
-            //send email invitation
-            EmailService email = new EmailService();
-
-            string subject = "QHS Follow-up Survey: " + txtTitle.Value;
-
-            var manager = Context.GetOwinContext().GetUserManager<ApplicationUserManager>();
-            ApplicationUser user = manager.FindByName(User.Identity.Name);
-            string destination = user.Email;
-
-            //surveyLink = "~/Guest/PISurvey?SurveyId=" + surveyForm.Id,
-            string url = HttpContext.Current.Request.Url.AbsoluteUri;
-
-            //caution!!! make sure this is for production 
-            if (System.Configuration.ConfigurationManager.AppSettings["isProduction"].Equals("Y"))
-            {
-                url = System.Configuration.ConfigurationManager.AppSettings["internet"] + "/ProjectForm2";
-                destination = surveyForm.SendTo;
+            //make sure the button is not of type "submit" but "button"
+            if (myButton.getAttribute('type') == 'button') {
+                // disable the button                
+                myButton.disabled = true;
+                //myButton.className = "btn-inactive";
+                myButton.value = "Processing......";
             }
-
-            string surveyLink = url.Replace("ProjectForm2", "Guest/PISurveyForm?Id=" + surveyForm.Id);
-
-            StringBuilder body = new StringBuilder();
-            body.AppendFormat("<p>Dear {0},</p>", ddlPI.SelectedItem.Text);
-            body.AppendLine("<p></P>");
-            body.AppendLine(@"<p>Thank you for working with us. The Quantitative Health Sciences (QHS) strives for excellence in high quality, efficient, and reliable collaborations and services in the quantitative sciences. To further improve our support, we invite you to complete a brief follow-up survey regarding your project listed below. This survey will take less than 5 minutes of your time. Your feedback is valuable to us.</p>");
-            body.AppendLine("<p></P>");
-            body.AppendFormat("<p style=\"margin-left:.5in\">Project title: {0}<br />", txtTitle.Value);
-            body.AppendFormat("Faculty/Staff: {0}<br />", surveyForm.LeadBiostat);
-            body.AppendFormat("Project period: {0} - {1}<br />", ((DateTime)surveyForm.ProjectInitialDate).ToShortDateString(), ((DateTime)surveyForm.ProjectCompletionDate).ToShortDateString());
-            //body.AppendFormat("Service hours: {0} PhD hours; {1} MS hours</p>", surveyForm.PhdHours, surveyForm.MsHours);
-            //body.AppendLine();
-            body.AppendLine("<p></P>");
-            body.AppendLine("<p>Click on the link below to complete the QHS follow-up survey:</p>");
-            body.AppendLine("<p></P>");
-            body.AppendFormat("<p style=\"margin-left:.5in\">{0}</p>", surveyLink);
-            body.AppendLine("<p></P>");
-            //body.AppendLine();
-            body.AppendLine("<i>This survey can only be completed once.</i>");
-            body.AppendLine("<p></P>");
-            body.AppendLine("<p>Aloha,</P>");
-            body.AppendLine("<p></P>");
-            body.AppendLine(@"<p>Bioinformatics Core Facility<br />
-                                Department of Quantitative Health Sciences<br />
-                                University of Hawaii John A. Burns School of Medicine<br />
-                                651 Ilalo Street, Medical Education Building, Suite 411<br />
-                                Honolulu, HI 96813<br />
-                                Phone: (808) 692-1840<br />
-                                Fax: (808) 692-1966<br />
-                                E-mail: qhs@hawaii.edu</P>");
-
-            IdentityMessage im = new IdentityMessage()
-            {
-                Subject = subject,
-                Body = body.ToString(),
-                Destination = destination
-            };
-
-            email.Send(im);
+            return true;
         }
 
-        #endregion
+        //function MakeSubmitClickableAgain() {
+        //    var thisButton = $(".submitBtn[value='Processing......']");
 
-    }
-}
+        //    thisButton.prop("disabled", false);
+        //    thisButton.prop("value", "Submit");
+        //}
+
+
+        // -- Unchecks other choices if choice is selected in specific section -- \\
+        $("#MainContent_chkBiostat").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkBioinfo').prop('checked', false);
+            }
+            else
+                $('#MainContent_chkBioinfo').prop('checked', true);
+        });
+
+        $("#MainContent_chkBioinfo").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkBiostat').prop('checked', false);
+            }
+            else
+                $('#MainContent_chkBiostat').prop('checked', true);
+        });
+
+        //------------------------------------------------------------------
+        //$("#MainContent_chkRequestTypeRfunded").change(function () {
+        //    if (this.checked) {
+        //        $('#MainContent_chkRequestTypePilotPI').prop('checked', false);
+        //        $('#MainContent_chkRequestTypeOther').prop('checked', false);
+        //    }
+        //    //else
+        //    //    $('#MainContent_chkCreditToBioinfo').prop('checked', true);
+        //});
+
+        //$("#MainContent_chkRequestTypePilotPI").change(function () {
+        //    if (this.checked) {
+        //        $('#MainContent_chkRequestTypeRfunded').prop('checked', false);
+        //        $('#MainContent_chkRequestTypeOther').prop('checked', false);
+        //    }
+        //});
+
+        //$("#MainContent_chkRequestTypeOther").change(function () {
+        //    if (this.checked) {
+        //        $('#MainContent_chkRequestTypeRfunded').prop('checked', false);
+        //        $('#MainContent_chkRequestTypePilotPI').prop('checked', false);
+        //    }
+        //});
+
+        ////------------------------------------------------------------------
+
+        $("#MainContent_chkRequestTypeApplication").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeFunded').prop('checked', false);
+            }
+            //else
+            //    $('#MainContent_chkCreditToBioinfo').prop('checked', true);
+        });
+
+        $("#MainContent_chkRequestTypeFunded").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeApplication').prop('checked', false);
+            }
+        });
+
+        //------------------------------------------------------------------
+
+        $("#MainContent_chkRequestTypeOlaPilot").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaR21').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR01').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaOther').prop('checked', false);
+            }
+            //else
+            //    $('#MainContent_chkCreditToBioinfo').prop('checked', true);
+        });
+
+        $("#MainContent_chkRequestTypeOlaR21").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaPilot').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR01').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaOther').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkRequestTypeOlaR01").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaPilot').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR21').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaOther').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkRequestTypeOlaOther").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaPilot').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR01').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR21').prop('checked', false);
+            }
+        });
+
+        //------------------------------------------------------------------
+
+
+        $("#MainContent_chkRequestTypeOlaPilot").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaR21').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR01').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaOther').prop('checked', false);
+            }
+            //else
+            //    $('#MainContent_chkCreditToBioinfo').prop('checked', true);
+        });
+
+        $("#MainContent_hkRequestTypeOlaR21").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaPilot').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR01').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaOther').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkRequestTypeOlaR01").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaR21').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaPilot').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaOther').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkRequestTypeOlaOther").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkRequestTypeOlaR21').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaR01').prop('checked', false);
+                $('#MainContent_chkRequestTypeOlaPilot').prop('checked', false);
+            }
+        });
+
+        //-----------------------------------------------------------------
+
+        $("#MainContent_chkIsRmatrix").change(function () {
+            if (this.checked) {
+                $("#MainContent_chkReportToRmatrix").prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkReportToRmatrix").change(function () {
+            if (this.checked) {
+                $("#MainContent_chkIsRmatrix").prop('checked', false);
+                $("divRmatrixRequest").hide(); //hideRMATRIX
+            }
+        });
+
+        //-----------------------------------------------------------------
+
+        $("#MainContent_chkIsOlaHawaii").change(function () {
+            if (this.checked) {
+                $("#MainContent_chkReportToOlaHawaii").prop('checked', false);
+            } else {
+                $("#divOlaHawaiiRequest").hide();
+                $('#divRequestType').hide();
+            }
+        });
+
+        $("#MainContent_chkReportToOlaHawaii").change(function () {
+            if (this.checked) {
+                $("#MainContent_chkIsOlaHawaii").prop('checked', false);
+            } else {
+                $('#divRequestType').hide();
+            }
+        });
+
+        //-----------------------------------------------------------------
+        $("#MainContent_chkHealthDisparityYes").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkHealthDisparityNo').prop('checked', false);
+                $('#MainContent_chkHealthDisparityNA').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkHealthDisparityNo").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkHealthDisparityYes').prop('checked', false);
+                $('#MainContent_chkHealthDisparityNA').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkHealthDisparityNA").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkHealthDisparityYes').prop('checked', false);
+                $('#MainContent_chkHealthDisparityNo').prop('checked', false);
+            }
+        });
+
+        //-----------------------------------------------------------------
+        $("#MainContent_chkLetterOfSupportYes").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkLetterOfSupportNo').prop('checked', false);
+                $('#MainContent_chkLetterOfSupportNA').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkLetterOfSupportNo").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkLetterOfSupportYes').prop('checked', false);
+                $('#MainContent_chkLetterOfSupportNA').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkLetterOfSupportNA").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkLetterOfSupportYes').prop('checked', false);
+                $('#MainContent_chkLetterOfSupportNo').prop('checked', false);
+            }
+        });
+
+        //-----------------------------------------------------------------
+        $("#MainContent_chkLOS_Collaborative").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkLOS_Noncollaborative').prop('checked', false);
+                $('#MainContent_chkLOS_NA').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkLOS_Noncollaborative").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkLOS_Collaborative').prop('checked', false);
+                $('#MainContent_chkLOS_NA').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkLOS_NA").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkLOS_Collaborative').prop('checked', false);
+                $('#MainContent_chkLOS_Noncollaborative').prop('checked', false);
+            }
+        });
+
+
+        //-----------------------------------------------------------------
+        $("#MainContent_chkDeptFundMouYes").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkDeptFundMouNo').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkDeptFundMouNo").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkDeptFundMouYes').prop('checked', false);
+            }
+        });
+
+        //-----------------------------------------------------------------
+
+        $("#MainContent_chkCreditToBiostat").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkCreditToBioinfo').prop('checked', false);
+                $('#MainContent_chkCreditToBoth').prop('checked', false);
+            }
+            //else
+            //    $('#MainContent_chkCreditToBioinfo').prop('checked', true);
+        });
+
+        $("#MainContent_chkCreditToBioinfo").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkCreditToBiostat').prop('checked', false);
+                $('#MainContent_chkCreditToBoth').prop('checked', false);
+            }
+        });
+
+        $("#MainContent_chkCreditToBoth").change(function () {
+            if (this.checked) {
+                $('#MainContent_chkCreditToBiostat').prop('checked', false);
+                $('#MainContent_chkCreditToBioinfo').prop('checked', false);
+            }
+        });
+
+        //------------------------------------------------------------------
+
+
+    </script>
+</asp:Content>

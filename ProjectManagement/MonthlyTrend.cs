@@ -1,6 +1,8 @@
-﻿namespace ProjectManagement {
-    
-    
-    public partial class MonthlyTrend {
+﻿namespace ProjectManagement
+{
+
+
+    public partial class MonthlyTrend
+    {
     }
 }

@@ -1,6 +1,8 @@
-﻿namespace ProjectManagement.Report {
-    
-    
-    public partial class DSIndividual {
+﻿namespace ProjectManagement.Report
+{
+
+
+    public partial class DSIndividual
+    {
     }
 }
