@@ -86,7 +86,7 @@ namespace ProjectManagement
         public static string GetResetPasswordRedirectUrl(string code, HttpRequest request)
         {
             string requestUrl = request.Url.ToString();
-            string accountPasswordPart = requestUrl.Contains("pm-bioinfo") ? "/PM-Bioinfo/Account/ResetPassword?" : "/Account/ResetPassword?";
+            string accountPasswordPart = requestUrl.Contains("localhost") ? "/Account/ResetPassword?" : "/PM-Bioinfo/Account/ResetPassword?";
 
             var absoluteUri = accountPasswordPart + CodeKey + "=" + HttpUtility.UrlEncode(code);
             return new Uri(request.Url, absoluteUri).AbsoluteUri.ToString();
@@ -95,7 +95,7 @@ namespace ProjectManagement
         public static string GetUserConfirmationRedirectUrl(string code, string userId, HttpRequest request)
         {
             string requestUrl = request.Url.ToString();
-            string accountConfirmPart = requestUrl.Contains("pm-bioinfo") ? "/PM-Bioinfo/Account/Confirm?" : "/Account/Confirm?";
+            string accountConfirmPart = requestUrl.Contains("localhost") ? "/Account/Confirm?" : "/PM-Bioinfo/Account/Confirm?" ;
             
             var absoluteUri = accountConfirmPart + CodeKey + "=" + HttpUtility.UrlEncode(code) + "&" + UserIdKey + "=" + HttpUtility.UrlEncode(userId);
             return new Uri(request.Url, absoluteUri).AbsoluteUri.ToString();
